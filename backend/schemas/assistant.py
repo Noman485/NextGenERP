@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -16,6 +18,7 @@ class AssistantHistoryItem(BaseModel):
 class AssistantChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=1000)
     history: list[AssistantHistoryItem] = Field(default_factory=list, max_length=10)
+    language: Literal["en", "hi", "bn"] = "en"
 
     @field_validator("message")
     @classmethod
@@ -30,3 +33,4 @@ class AssistantChatResponse(BaseModel):
     reply: str
     suggestions: list[str]
     mode: str
+    language: Literal["en", "hi", "bn"] = "en"

@@ -2,18 +2,168 @@ import { useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../api';
 import { Icon } from './Icons';
 
-const INITIAL_SUGGESTIONS = [
-  'Show low-stock products',
-  'What are the pending sales orders?',
-  'How do I add a product?',
-  'What should I reorder?',
+const LANGUAGES = [
+  { code: 'en', label: 'English', speech: 'en-IN' },
+  { code: 'hi', label: 'हिन्दी', speech: 'hi-IN' },
+  { code: 'bn', label: 'বাংলা', speech: 'bn-IN' },
 ];
 
-const WELCOME_MESSAGE = {
-  role: 'assistant',
-  content:
-    "Hi! I'm the NextGenERP Assistant. I can answer questions about this workspace using live inventory, order and supplier data. I only cover NextGenERP topics.",
+const SUGGESTIONS = {
+  en: [
+    'Show low-stock products',
+    'What are the pending sales orders?',
+    'How do I add a product?',
+    'What should I reorder?',
+  ],
+  hi: [
+    'कम स्टॉक वाले उत्पाद दिखाएँ',
+    'लंबित बिक्री ऑर्डर कौन से हैं?',
+    'उत्पाद कैसे जोड़ें?',
+    'मुझे क्या रीऑर्डर करना चाहिए?',
+  ],
+  bn: [
+    'কম স্টকের পণ্য দেখান',
+    'কোন বিক্রয় অর্ডারগুলি মুলতুবি আছে?',
+    'কীভাবে একটি পণ্য যোগ করব?',
+    'আমার কী পুনরায় অর্ডার করা উচিত?',
+  ],
 };
+
+const UI_TEXT = {
+  en: {
+    launcher: 'Ask assistant',
+    launcherLabel: 'Open NextGenERP Assistant',
+    subtitle: 'Project help and live workspace data',
+    clear: 'Clear',
+    placeholder: 'Ask about stock, orders, suppliers...',
+    listening: 'Listening…',
+    disclaimer:
+      'Only NextGenERP topics. Answers use live workspace data and can be wrong; verify before acting.',
+    language: 'Answer language',
+    voiceInput: 'Ask by voice',
+    stopListening: 'Stop listening',
+    voiceUnsupported: 'Voice input is not supported in this browser',
+    speak: 'Play answer aloud',
+    stopSpeaking: 'Stop playback',
+    autoSpeak: 'Auto-speak answers',
+    speechUnsupported: 'Spoken replies are not supported in this browser',
+    thinking: 'Assistant is thinking',
+    welcome:
+      "Hi! I'm the NextGenERP Assistant. I can answer questions about this workspace using live inventory, order and supplier data. I only cover NextGenERP topics.",
+    micDenied:
+      'Microphone permission was denied. Allow microphone access and try again.',
+    micNoSpeech: 'No speech was detected. Try again.',
+    micNoDevice: 'No microphone was found.',
+    micNetwork:
+      'Voice recognition is unavailable right now. Check your connection or type your question.',
+    micError: 'Voice input could not start. Please type your question.',
+    retry: 'Retry',
+    assistantError: 'The assistant could not answer right now',
+    unreachable:
+      'Cannot reach the assistant. Check that the backend is running.',
+    fallbackReply: 'I could not generate an answer for that.',
+    close: 'Close assistant',
+    panelLabel: 'NextGenERP Assistant',
+    messageLabel: 'Message the NextGenERP Assistant',
+    send: 'Send message',
+  },
+  hi: {
+    launcher: 'सहायक से पूछें',
+    launcherLabel: 'NextGenERP सहायक खोलें',
+    subtitle: 'प्रोजेक्ट सहायता और लाइव वर्कस्पेस डेटा',
+    clear: 'साफ़ करें',
+    placeholder: 'स्टॉक, ऑर्डर, आपूर्तिकर्ता के बारे में पूछें...',
+    listening: 'सुन रहा हूँ…',
+    disclaimer:
+      'केवल NextGenERP विषय। उत्तर लाइव वर्कस्पेस डेटा से हैं और गलत हो सकते हैं; कार्रवाई से पहले जाँचें।',
+    language: 'उत्तर की भाषा',
+    voiceInput: 'बोलकर पूछें',
+    stopListening: 'सुनना बंद करें',
+    voiceUnsupported: 'इस ब्राउज़र में वॉइस इनपुट समर्थित नहीं है',
+    speak: 'उत्तर सुनें',
+    stopSpeaking: 'प्लेबैक रोकें',
+    autoSpeak: 'उत्तर स्वतः सुनें',
+    speechUnsupported: 'इस ब्राउज़र में बोलकर उत्तर सुनाना समर्थित नहीं है',
+    thinking: 'सहायक सोच रहा है',
+    welcome:
+      'नमस्ते! मैं NextGenERP सहायक हूँ। मैं लाइव इन्वेंटरी, ऑर्डर और आपूर्तिकर्ता डेटा से इस वर्कस्पेस के बारे में उत्तर दे सकता हूँ। मैं केवल NextGenERP विषयों में मदद करता हूँ।',
+    micDenied:
+      'माइक्रोफ़ोन अनुमति अस्वीकृत हुई। अनुमति दें और फिर प्रयास करें।',
+    micNoSpeech: 'कोई आवाज़ नहीं मिली। फिर प्रयास करें।',
+    micNoDevice: 'कोई माइक्रोफ़ोन नहीं मिला।',
+    micNetwork:
+      'वॉइस पहचान अभी उपलब्ध नहीं है। कनेक्शन जाँचें या प्रश्न टाइप करें।',
+    micError: 'वॉइस इनपुट शुरू नहीं हो सका। कृपया प्रश्न टाइप करें।',
+    retry: 'फिर प्रयास करें',
+    assistantError: 'सहायक अभी उत्तर नहीं दे सका',
+    unreachable: 'सहायक से संपर्क नहीं हो रहा। जाँचें कि बैकएंड चल रहा है।',
+    fallbackReply: 'मैं उसका उत्तर नहीं बना सका।',
+    close: 'सहायक बंद करें',
+    panelLabel: 'NextGenERP सहायक',
+    messageLabel: 'NextGenERP सहायक को संदेश भेजें',
+    send: 'संदेश भेजें',
+  },
+  bn: {
+    launcher: 'সহায়ককে জিজ্ঞাসা করুন',
+    launcherLabel: 'NextGenERP সহায়ক খুলুন',
+    subtitle: 'প্রকল্প সহায়তা এবং লাইভ ওয়ার্কস্পেস ডেটা',
+    clear: 'মুছুন',
+    placeholder: 'স্টক, অর্ডার, সরবরাহকারী সম্পর্কে জিজ্ঞাসা করুন...',
+    listening: 'শুনছি…',
+    disclaimer:
+      'শুধু NextGenERP বিষয়। উত্তর লাইভ ওয়ার্কস্পেস ডেটা থেকে আসে এবং ভুল হতে পারে; ব্যবস্থা নেওয়ার আগে যাচাই করুন।',
+    language: 'উত্তরের ভাষা',
+    voiceInput: 'কণ্ঠে জিজ্ঞাসা করুন',
+    stopListening: 'শোনা বন্ধ করুন',
+    voiceUnsupported: 'এই ব্রাউজারে কণ্ঠ ইনপুট সমর্থিত নয়',
+    speak: 'উত্তর শুনুন',
+    stopSpeaking: 'প্লেব্যাক বন্ধ করুন',
+    autoSpeak: 'উত্তর স্বয়ংক্রিয়ভাবে শুনুন',
+    speechUnsupported: 'এই ব্রাউজারে কথা বলে উত্তর শোনানো সমর্থিত নয়',
+    thinking: 'সহায়ক ভাবছে',
+    welcome:
+      'নমস্কার! আমি NextGenERP সহায়ক। আমি লাইভ ইনভেন্টরি, অর্ডার ও সরবরাহকারী ডেটা ব্যবহার করে এই ওয়ার্কস্পেস সম্পর্কে উত্তর দিতে পারি। আমি শুধু NextGenERP বিষয়ে সাহায্য করি।',
+    micDenied:
+      'মাইক্রোফোন অনুমতি প্রত্যাখ্যাত হয়েছে। অনুমতি দিয়ে আবার চেষ্টা করুন।',
+    micNoSpeech: 'কোনো কথা শোনা যায়নি। আবার চেষ্টা করুন।',
+    micNoDevice: 'কোনো মাইক্রোফোন পাওয়া যায়নি।',
+    micNetwork:
+      'কণ্ঠ শনাক্তকরণ এখন উপলব্ধ নয়। সংযোগ পরীক্ষা করুন বা প্রশ্ন টাইপ করুন।',
+    micError: 'কণ্ঠ ইনপুট শুরু করা যায়নি। অনুগ্রহ করে প্রশ্ন টাইপ করুন।',
+    retry: 'আবার চেষ্টা করুন',
+    assistantError: 'সহায়ক এখন উত্তর দিতে পারেনি',
+    unreachable: 'সহায়কের সাথে সংযোগ হচ্ছে না। ব্যাকএন্ড চলছে কিনা দেখুন।',
+    fallbackReply: 'আমি এর উত্তর তৈরি করতে পারিনি।',
+    close: 'সহায়ক বন্ধ করুন',
+    panelLabel: 'NextGenERP সহায়ক',
+    messageLabel: 'NextGenERP সহায়ককে বার্তা পাঠান',
+    send: 'বার্তা পাঠান',
+  },
+};
+
+function welcomeMessage(language) {
+  return {
+    role: 'assistant',
+    content: UI_TEXT[language].welcome,
+  };
+}
+
+function getSpeechRecognition() {
+  if (typeof window === 'undefined') return null;
+  return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+}
+
+function canSpeak() {
+  return (
+    typeof window !== 'undefined' &&
+    'speechSynthesis' in window &&
+    typeof window.SpeechSynthesisUtterance === 'function'
+  );
+}
+
+function speechLocale(language) {
+  return LANGUAGES.find((item) => item.code === language)?.speech || 'en-IN';
+}
 
 function getErrorMessage(data, fallback) {
   if (typeof data.detail === 'string') return data.detail;
@@ -25,75 +175,232 @@ function getErrorMessage(data, fallback) {
 
 export default function Assistant() {
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState([WELCOME_MESSAGE]);
-  const [suggestions, setSuggestions] = useState(INITIAL_SUGGESTIONS);
+  const [language, setLanguage] = useState('en');
+  const [messages, setMessages] = useState(() => [welcomeMessage('en')]);
+  const [suggestions, setSuggestions] = useState(SUGGESTIONS.en);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
+  const [voiceError, setVoiceError] = useState('');
   const [lastAttempt, setLastAttempt] = useState(null);
-  const endRef = useRef(null);
+  const [listening, setListening] = useState(false);
+  const [speakingText, setSpeakingText] = useState('');
+  const [autoSpeak, setAutoSpeak] = useState(false);
+  const logRef = useRef(null);
   const inputRef = useRef(null);
+  const recognitionRef = useRef(null);
+  const submitRef = useRef(null);
+  const requestSeqRef = useRef(0);
+
+  const copy = UI_TEXT[language];
+  const recognitionSupported = Boolean(getSpeechRecognition());
+  const speechSupported = canSpeak();
 
   useEffect(() => {
     if (open) inputRef.current?.focus();
   }, [open]);
 
   useEffect(() => {
-    if (open) endRef.current?.scrollIntoView({ block: 'nearest' });
+    if (!open) return;
+    const log = logRef.current;
+    if (log) log.scrollTop = log.scrollHeight;
   }, [messages, sending, open]);
 
   useEffect(() => {
     if (!open) return undefined;
 
     function handleKeyDown(event) {
-      if (event.key === 'Escape') setOpen(false);
+      if (event.key !== 'Escape') return;
+      const recognition = recognitionRef.current;
+      if (recognition) {
+        try {
+          recognition.abort();
+        } catch {
+          // Recognition may already be stopped.
+        }
+      }
+      recognitionRef.current = null;
+      setListening(false);
+      if (canSpeak()) window.speechSynthesis.cancel();
+      setSpeakingText('');
+      setOpen(false);
     }
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [open]);
 
+  useEffect(() => {
+    return () => {
+      const recognition = recognitionRef.current;
+      if (recognition) {
+        try {
+          recognition.abort();
+        } catch {
+          // Recognition may already be stopped.
+        }
+      }
+      if (canSpeak()) window.speechSynthesis.cancel();
+    };
+  }, []);
+
+  function stopSpeaking() {
+    if (canSpeak()) window.speechSynthesis.cancel();
+    setSpeakingText('');
+  }
+
+  function speak(replyText) {
+    if (!speechSupported) {
+      setVoiceError(copy.speechUnsupported);
+      return;
+    }
+    if (speakingText === replyText) {
+      stopSpeaking();
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const utterance = new window.SpeechSynthesisUtterance(replyText);
+    const locale = speechLocale(language);
+    utterance.lang = locale;
+    utterance.rate = 0.98;
+
+    try {
+      const voices = window.speechSynthesis.getVoices() || [];
+      const voice =
+        voices.find((item) => item.lang === locale) ||
+        voices.find((item) =>
+          item.lang?.toLowerCase().startsWith(language.toLowerCase()),
+        );
+      if (voice) utterance.voice = voice;
+    } catch {
+      // Voice selection is best-effort; the default voice still works.
+    }
+
+    utterance.onend = () => setSpeakingText('');
+    utterance.onerror = () => setSpeakingText('');
+    setSpeakingText(replyText);
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function stopListening() {
+    const recognition = recognitionRef.current;
+    if (recognition) {
+      try {
+        recognition.stop();
+      } catch {
+        // Recognition may already be stopped.
+      }
+    }
+    recognitionRef.current = null;
+    setListening(false);
+  }
+
+  function startListening() {
+    const SpeechRecognition = getSpeechRecognition();
+    if (!SpeechRecognition) {
+      setVoiceError(copy.voiceUnsupported);
+      return;
+    }
+    if (listening) {
+      stopListening();
+      return;
+    }
+    if (sending) return;
+
+    stopSpeaking();
+    setVoiceError('');
+    setError('');
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = speechLocale(language);
+    recognition.interimResults = false;
+    recognition.continuous = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => setListening(true);
+    recognition.onresult = (event) => {
+      const transcript =
+        event.results?.[0]?.[0]?.transcript?.trim() || '';
+      if (transcript) {
+        setInput('');
+        submitRef.current?.(transcript);
+      }
+    };
+    recognition.onerror = (event) => {
+      const code = event?.error;
+      if (code === 'not-allowed' || code === 'service-not-allowed') {
+        setVoiceError(copy.micDenied);
+      } else if (code === 'no-speech') {
+        setVoiceError(copy.micNoSpeech);
+      } else if (code === 'audio-capture') {
+        setVoiceError(copy.micNoDevice);
+      } else if (code === 'network') {
+        setVoiceError(copy.micNetwork);
+      } else {
+        setVoiceError(copy.micError);
+      }
+    };
+    recognition.onend = () => {
+      recognitionRef.current = null;
+      setListening(false);
+    };
+
+    recognitionRef.current = recognition;
+    try {
+      recognition.start();
+    } catch {
+      recognitionRef.current = null;
+      setListening(false);
+      setVoiceError(copy.micError);
+    }
+  }
+
   async function requestReply(content, history) {
+    const requestId = ++requestSeqRef.current;
     setSending(true);
     setError('');
+    setVoiceError('');
     setLastAttempt({ content, history });
 
     try {
       const response = await apiFetch('/assistant/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: content, history }),
+        body: JSON.stringify({ message: content, history, language }),
       });
       const data = await response.json().catch(() => ({}));
+
+      if (requestId !== requestSeqRef.current) return;
 
       if (!response.ok) {
         throw new Error(
           getErrorMessage(
             data,
-            `The assistant could not answer right now (HTTP ${response.status}).`,
+            `${copy.assistantError} (HTTP ${response.status}).`,
           ),
         );
       }
 
+      const reply = data.reply || copy.fallbackReply;
       setMessages((current) => [
         ...current,
-        {
-          role: 'assistant',
-          content: data.reply || 'I could not generate an answer for that.',
-        },
+        { role: 'assistant', content: reply },
       ]);
       if (Array.isArray(data.suggestions) && data.suggestions.length) {
         setSuggestions(data.suggestions);
       }
       setLastAttempt(null);
+      if (autoSpeak && speechSupported) speak(reply);
     } catch (requestError) {
+      if (requestId !== requestSeqRef.current) return;
       setError(
         requestError instanceof TypeError
-          ? 'Cannot reach the assistant. Check that the backend is running.'
+          ? copy.unreachable
           : requestError.message,
       );
     } finally {
-      setSending(false);
+      if (requestId === requestSeqRef.current) setSending(false);
     }
   }
 
@@ -111,6 +418,8 @@ export default function Assistant() {
     requestReply(content, history);
   }
 
+  submitRef.current = submitContent;
+
   function handleSubmit(event) {
     event.preventDefault();
     submitContent(input);
@@ -123,12 +432,54 @@ export default function Assistant() {
   }
 
   function clearChat() {
-    setMessages([WELCOME_MESSAGE]);
-    setSuggestions(INITIAL_SUGGESTIONS);
+    stopListening();
+    stopSpeaking();
+    requestSeqRef.current += 1;
+    setSending(false);
+    setMessages([welcomeMessage(language)]);
+    setSuggestions(SUGGESTIONS[language]);
     setInput('');
     setError('');
+    setVoiceError('');
     setLastAttempt(null);
   }
+
+  function handleLanguageChange(event) {
+    const nextLanguage = event.target.value;
+    if (!UI_TEXT[nextLanguage]) return;
+
+    stopListening();
+    stopSpeaking();
+    requestSeqRef.current += 1;
+    setSending(false);
+    setLanguage(nextLanguage);
+    setMessages([welcomeMessage(nextLanguage)]);
+    setSuggestions(SUGGESTIONS[nextLanguage]);
+    setInput('');
+    setError('');
+    setVoiceError('');
+    setLastAttempt(null);
+  }
+
+  function toggleAutoSpeak() {
+    if (!speechSupported) {
+      setVoiceError(copy.speechUnsupported);
+      return;
+    }
+    const next = !autoSpeak;
+    setAutoSpeak(next);
+    if (!next) stopSpeaking();
+  }
+
+  function handleClose() {
+    stopListening();
+    stopSpeaking();
+    requestSeqRef.current += 1;
+    setSending(false);
+    setOpen(false);
+  }
+
+  const visibleError = error || voiceError;
 
   if (!open) {
     return (
@@ -142,8 +493,8 @@ export default function Assistant() {
         <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-teal-300 to-emerald-400 text-[#06201d]">
           <Icon name="spark" size={16} />
         </span>
-        <span className="hidden sm:inline">Ask assistant</span>
-        <span className="sr-only sm:hidden">Open NextGenERP Assistant</span>
+        <span className="hidden sm:inline">{copy.launcher}</span>
+        <span className="sr-only sm:hidden">{copy.launcherLabel}</span>
       </button>
     );
   }
@@ -151,7 +502,7 @@ export default function Assistant() {
   return (
     <section
       id="assistant-panel"
-      aria-label="NextGenERP Assistant"
+      aria-label={copy.panelLabel}
       className="fixed inset-x-3 bottom-3 z-50 flex h-[min(34rem,calc(100vh-1.5rem))] flex-col overflow-hidden rounded-2xl border border-stone-200 bg-[#fffdf9] shadow-[0_30px_80px_-30px_rgba(28,25,23,0.7)] sm:inset-x-auto sm:bottom-5 sm:right-5 sm:w-[24rem]"
     >
       <header className="flex items-center gap-3 border-b border-stone-200 bg-gradient-to-r from-[#12181a] via-[#0f1517] to-[#0b1112] px-4 py-3 text-stone-100">
@@ -159,48 +510,117 @@ export default function Assistant() {
           <Icon name="spark" size={17} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold tracking-tight">NextGenERP Assistant</p>
-          <p className="truncate text-[10px] text-stone-400">Project help and live workspace data</p>
+          <p className="truncate text-sm font-semibold tracking-tight">
+            NextGenERP Assistant
+          </p>
+          <p className="truncate text-[10px] text-stone-400">{copy.subtitle}</p>
         </div>
         <button
           type="button"
-          onClick={clearChat}
-          className="rounded-md px-2 py-1 text-[10px] font-medium text-stone-400 transition hover:bg-white/10 hover:text-white"
-        >
-          Clear
-        </button>
-        <button
-          type="button"
-          onClick={() => setOpen(false)}
-          aria-label="Close assistant"
+          onClick={handleClose}
+          aria-label={copy.close}
           className="rounded-md p-1.5 text-stone-400 transition hover:bg-white/10 hover:text-white"
         >
           <Icon name="close" size={16} />
         </button>
       </header>
 
+      <div className="flex flex-wrap items-center gap-2 border-b border-stone-200 bg-stone-50/80 px-3 py-2">
+        <label className="inline-flex items-center gap-1.5 text-[11px] font-medium text-stone-600">
+          <Icon name="globe" size={13} />
+          <span className="sr-only">{copy.language}</span>
+          <select
+            value={language}
+            onChange={handleLanguageChange}
+            aria-label={copy.language}
+            className="rounded-md border border-stone-300 bg-white px-2 py-1 text-[11px] font-medium text-stone-700 outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
+          >
+            {LANGUAGES.map((item) => (
+              <option key={item.code} value={item.code}>
+                {item.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <button
+          type="button"
+          onClick={toggleAutoSpeak}
+          disabled={!speechSupported}
+          aria-pressed={autoSpeak}
+          aria-label={copy.autoSpeak}
+          title={speechSupported ? copy.autoSpeak : copy.speechUnsupported}
+          className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[11px] font-medium transition disabled:cursor-not-allowed disabled:opacity-40 ${
+            autoSpeak
+              ? 'border-teal-300 bg-teal-50 text-teal-800'
+              : 'border-stone-300 bg-white text-stone-600 hover:bg-stone-50'
+          }`}
+        >
+          <Icon name={autoSpeak ? 'volume' : 'volumeOff'} size={13} />
+          <span className="hidden sm:inline">{copy.autoSpeak}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={clearChat}
+          className="ml-auto rounded-md px-2 py-1 text-[11px] font-medium text-stone-500 transition hover:bg-stone-200/70 hover:text-stone-800"
+        >
+          {copy.clear}
+        </button>
+      </div>
+
       <div
+        ref={logRef}
         role="log"
         aria-live="polite"
         aria-relevant="additions"
         className="flex-1 space-y-3 overflow-y-auto px-4 py-4"
       >
-        {messages.map((message, index) => (
-          <div
-            key={`${message.role}-${index}`}
-            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
+        {messages.map((message, index) => {
+          const isSpeaking = speakingText === message.content;
+          return (
             <div
-              className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
-                message.role === 'user'
-                  ? 'rounded-br-md bg-teal-700 text-white'
-                  : 'rounded-bl-md border border-stone-200 bg-white text-stone-700'
+              key={`${message.role}-${index}`}
+              className={`flex ${
+                message.role === 'user' ? 'justify-end' : 'justify-start'
               }`}
             >
-              {message.content}
+              <div
+                className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
+                  message.role === 'user'
+                    ? 'rounded-br-md bg-teal-700 text-white'
+                    : 'rounded-bl-md border border-stone-200 bg-white text-stone-700'
+                }`}
+              >
+                <p className="whitespace-pre-wrap">{message.content}</p>
+                {message.role === 'assistant' && (
+                  <button
+                    type="button"
+                    onClick={() => speak(message.content)}
+                    disabled={!speechSupported}
+                    aria-label={
+                      isSpeaking ? copy.stopSpeaking : copy.speak
+                    }
+                    title={speechSupported ? copy.speak : copy.speechUnsupported}
+                    className={`mt-1.5 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                      isSpeaking
+                        ? 'bg-teal-50 text-teal-700'
+                        : 'text-stone-400 hover:bg-stone-100 hover:text-stone-700'
+                    }`}
+                  >
+                    <Icon
+                      name={isSpeaking ? 'volumeOff' : 'volume'}
+                      size={12}
+                    />
+                    <span className="sr-only">
+                      {isSpeaking ? copy.stopSpeaking : copy.speak}
+                    </span>
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
 
         {sending && (
           <div className="flex justify-start">
@@ -208,27 +628,26 @@ export default function Assistant() {
               <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-stone-400 [animation-delay:-0.2s]" />
               <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-stone-400 [animation-delay:-0.1s]" />
               <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-stone-400" />
-              <span className="sr-only">Assistant is thinking</span>
+              <span className="sr-only">{copy.thinking}</span>
             </div>
           </div>
         )}
 
-        <div ref={endRef} />
       </div>
 
-      {error && (
+      {visibleError && (
         <div
           role="alert"
           className="mx-3 mb-2 flex items-start justify-between gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800"
         >
-          <span>{error}</span>
-          {lastAttempt && (
+          <span>{visibleError}</span>
+          {error && lastAttempt && (
             <button
               type="button"
               onClick={retry}
               className="shrink-0 font-semibold underline decoration-rose-300 underline-offset-2 hover:decoration-rose-600"
             >
-              Retry
+              {copy.retry}
             </button>
           )}
         </div>
@@ -251,26 +670,54 @@ export default function Assistant() {
 
       <form onSubmit={handleSubmit} className="border-t border-stone-200 p-3">
         <div className="flex items-end gap-2">
+          <button
+            type="button"
+            onClick={startListening}
+            disabled={!recognitionSupported || sending}
+            aria-pressed={listening}
+            aria-label={listening ? copy.stopListening : copy.voiceInput}
+            title={
+              recognitionSupported
+                ? listening
+                  ? copy.stopListening
+                  : copy.voiceInput
+                : copy.voiceUnsupported
+            }
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border transition disabled:cursor-not-allowed disabled:opacity-40 ${
+              listening
+                ? 'border-rose-300 bg-rose-50 text-rose-600'
+                : 'border-stone-300 bg-white text-stone-600 hover:bg-stone-50'
+            }`}
+          >
+            <Icon name="mic" size={16} />
+          </button>
           <input
             ref={inputRef}
             value={input}
             onChange={(event) => setInput(event.target.value)}
             maxLength={1000}
-            placeholder="Ask about stock, orders, suppliers..."
-            aria-label="Message the NextGenERP Assistant"
+            placeholder={listening ? copy.listening : copy.placeholder}
+            aria-label={copy.messageLabel}
             className="min-w-0 flex-1 rounded-lg border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-800 outline-none placeholder:text-stone-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
           />
           <button
             type="submit"
             disabled={sending || !input.trim()}
-            aria-label="Send message"
+            aria-label={copy.send}
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-stone-900 text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Icon name="send" size={16} />
           </button>
         </div>
         <p className="mt-2 text-[10px] leading-snug text-stone-400">
-          Only NextGenERP topics. Answers use live workspace data and can be wrong; verify before acting.
+          {listening ? (
+            <span className="inline-flex items-center gap-1.5 text-rose-600">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-500" />
+              {copy.listening}
+            </span>
+          ) : (
+            copy.disclaimer
+          )}
         </p>
       </form>
     </section>

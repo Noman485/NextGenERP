@@ -225,6 +225,7 @@ dist/
 
 # Local application data and logs
 *.db
+*.db.bak*
 *.sqlite
 *.sqlite3
 *.sqlite3-*

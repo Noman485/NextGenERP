@@ -3,9 +3,9 @@
   "project": "NextGenERP",
   "total": 1000,
   "status_counts": {
-    "not_run": 947,
-    "passed": 14,
-    "blocked": 39
+    "not_run": 932,
+    "passed": 27,
+    "blocked": 41
   },
   "scenarios": [
     {
@@ -13359,7 +13359,7 @@
       "id": "TC-0826",
       "module": "NextGenERP Assistant",
       "area": "Allowed scope",
-      "title": "Allowed scope: answer allowed topic: catalog counts",
+      "title": "Allowed scope: answer allowed topic: reorder needs",
       "type": "API",
       "priority": "P2",
       "steps": [
@@ -13375,7 +13375,7 @@
       "id": "TC-0827",
       "module": "NextGenERP Assistant",
       "area": "Allowed scope",
-      "title": "Allowed scope: answer allowed topic: reorder needs",
+      "title": "Allowed scope: answer allowed topic: navigation help",
       "type": "API",
       "priority": "P2",
       "steps": [
@@ -13391,7 +13391,7 @@
       "id": "TC-0828",
       "module": "NextGenERP Assistant",
       "area": "Allowed scope",
-      "title": "Allowed scope: answer allowed topic: navigation help",
+      "title": "Allowed scope: answer allowed topic: add product help",
       "type": "API",
       "priority": "P2",
       "steps": [
@@ -13407,7 +13407,7 @@
       "id": "TC-0829",
       "module": "NextGenERP Assistant",
       "area": "Allowed scope",
-      "title": "Allowed scope: answer allowed topic: add product help",
+      "title": "Allowed scope: answer allowed topic: forecast help",
       "type": "API",
       "priority": "P2",
       "steps": [
@@ -13423,22 +13423,6 @@
       "id": "TC-0830",
       "module": "NextGenERP Assistant",
       "area": "Allowed scope",
-      "title": "Allowed scope: answer allowed topic: forecast help",
-      "type": "API",
-      "priority": "P2",
-      "steps": [
-        "Prepare the stated data and authenticate unless the scenario tests authentication.",
-        "Execute: POST /assistant/chat with the described NextGenERP question",
-        "Inspect the status code, response body, and persisted database state."
-      ],
-      "expected": "200 OK with a project-specific answer, suggestions, and mode 'local' when no provider is configured.",
-      "status": "not_run",
-      "tags": []
-    },
-    {
-      "id": "TC-0831",
-      "module": "NextGenERP Assistant",
-      "area": "Allowed scope",
       "title": "Allowed scope: answer allowed topic: login help",
       "type": "API",
       "priority": "P2",
@@ -13452,23 +13436,7 @@
       "tags": []
     },
     {
-      "id": "TC-0832",
-      "module": "NextGenERP Assistant",
-      "area": "Allowed scope",
-      "title": "Allowed scope: answer allowed topic: dashboard help",
-      "type": "API",
-      "priority": "P2",
-      "steps": [
-        "Prepare the stated data and authenticate unless the scenario tests authentication.",
-        "Execute: POST /assistant/chat with the described NextGenERP question",
-        "Inspect the status code, response body, and persisted database state."
-      ],
-      "expected": "200 OK with a project-specific answer, suggestions, and mode 'local' when no provider is configured.",
-      "status": "not_run",
-      "tags": []
-    },
-    {
-      "id": "TC-0833",
+      "id": "TC-0831",
       "module": "NextGenERP Assistant",
       "area": "Refused scope",
       "title": "Refused scope: refuse off-topic topic: cricket result",
@@ -13484,7 +13452,7 @@
       "tags": []
     },
     {
-      "id": "TC-0834",
+      "id": "TC-0832",
       "module": "NextGenERP Assistant",
       "area": "Refused scope",
       "title": "Refused scope: refuse off-topic topic: weather forecast",
@@ -13500,7 +13468,7 @@
       "tags": []
     },
     {
-      "id": "TC-0835",
+      "id": "TC-0833",
       "module": "NextGenERP Assistant",
       "area": "Refused scope",
       "title": "Refused scope: refuse off-topic topic: world news",
@@ -13516,7 +13484,7 @@
       "tags": []
     },
     {
-      "id": "TC-0836",
+      "id": "TC-0834",
       "module": "NextGenERP Assistant",
       "area": "Refused scope",
       "title": "Refused scope: refuse off-topic topic: coding question",
@@ -13532,7 +13500,7 @@
       "tags": []
     },
     {
-      "id": "TC-0837",
+      "id": "TC-0835",
       "module": "NextGenERP Assistant",
       "area": "Refused scope",
       "title": "Refused scope: refuse off-topic topic: medical question",
@@ -13548,7 +13516,7 @@
       "tags": []
     },
     {
-      "id": "TC-0838",
+      "id": "TC-0836",
       "module": "NextGenERP Assistant",
       "area": "Refused scope",
       "title": "Refused scope: refuse off-topic topic: legal question",
@@ -13564,7 +13532,7 @@
       "tags": []
     },
     {
-      "id": "TC-0839",
+      "id": "TC-0837",
       "module": "NextGenERP Assistant",
       "area": "Refused scope",
       "title": "Refused scope: refuse off-topic topic: personal advice",
@@ -13580,7 +13548,7 @@
       "tags": []
     },
     {
-      "id": "TC-0840",
+      "id": "TC-0838",
       "module": "NextGenERP Assistant",
       "area": "Refused scope",
       "title": "Refused scope: refuse off-topic topic: math problem",
@@ -13596,39 +13564,7 @@
       "tags": []
     },
     {
-      "id": "TC-0841",
-      "module": "NextGenERP Assistant",
-      "area": "Refused scope",
-      "title": "Refused scope: refuse off-topic topic: translation request",
-      "type": "API",
-      "priority": "P2",
-      "steps": [
-        "Prepare the stated data and authenticate unless the scenario tests authentication.",
-        "Execute: POST /assistant/chat with the described off-topic request",
-        "Inspect the status code, response body, and persisted database state."
-      ],
-      "expected": "The reply refuses the topic before any LLM call and redirects to NextGenERP examples.",
-      "status": "not_run",
-      "tags": []
-    },
-    {
-      "id": "TC-0842",
-      "module": "NextGenERP Assistant",
-      "area": "Refused scope",
-      "title": "Refused scope: refuse off-topic topic: politics",
-      "type": "API",
-      "priority": "P2",
-      "steps": [
-        "Prepare the stated data and authenticate unless the scenario tests authentication.",
-        "Execute: POST /assistant/chat with the described off-topic request",
-        "Inspect the status code, response body, and persisted database state."
-      ],
-      "expected": "The reply refuses the topic before any LLM call and redirects to NextGenERP examples.",
-      "status": "not_run",
-      "tags": []
-    },
-    {
-      "id": "TC-0843",
+      "id": "TC-0839",
       "module": "NextGenERP Assistant",
       "area": "Refused scope",
       "title": "Refused scope: refuse off-topic topic: general knowledge",
@@ -13644,7 +13580,7 @@
       "tags": []
     },
     {
-      "id": "TC-0844",
+      "id": "TC-0840",
       "module": "NextGenERP Assistant",
       "area": "Refused scope",
       "title": "Refused scope: refuse off-topic topic: prompt injection",
@@ -13660,7 +13596,7 @@
       "tags": []
     },
     {
-      "id": "TC-0845",
+      "id": "TC-0841",
       "module": "NextGenERP Assistant",
       "area": "Live data answers",
       "title": "Live data answers: live-data answer: low-stock boundary",
@@ -13676,7 +13612,7 @@
       "tags": []
     },
     {
-      "id": "TC-0846",
+      "id": "TC-0842",
       "module": "NextGenERP Assistant",
       "area": "Live data answers",
       "title": "Live data answers: live-data answer: out-of-stock list",
@@ -13692,7 +13628,7 @@
       "tags": []
     },
     {
-      "id": "TC-0847",
+      "id": "TC-0843",
       "module": "NextGenERP Assistant",
       "area": "Live data answers",
       "title": "Live data answers: live-data answer: no low-stock items",
@@ -13708,7 +13644,7 @@
       "tags": []
     },
     {
-      "id": "TC-0848",
+      "id": "TC-0844",
       "module": "NextGenERP Assistant",
       "area": "Live data answers",
       "title": "Live data answers: live-data answer: product by name",
@@ -13724,7 +13660,7 @@
       "tags": []
     },
     {
-      "id": "TC-0849",
+      "id": "TC-0845",
       "module": "NextGenERP Assistant",
       "area": "Live data answers",
       "title": "Live data answers: live-data answer: product by SKU",
@@ -13740,7 +13676,7 @@
       "tags": []
     },
     {
-      "id": "TC-0850",
+      "id": "TC-0846",
       "module": "NextGenERP Assistant",
       "area": "Live data answers",
       "title": "Live data answers: live-data answer: supplier details",
@@ -13756,7 +13692,7 @@
       "tags": []
     },
     {
-      "id": "TC-0851",
+      "id": "TC-0847",
       "module": "NextGenERP Assistant",
       "area": "Live data answers",
       "title": "Live data answers: live-data answer: sales order lookup",
@@ -13772,7 +13708,7 @@
       "tags": []
     },
     {
-      "id": "TC-0852",
+      "id": "TC-0848",
       "module": "NextGenERP Assistant",
       "area": "Live data answers",
       "title": "Live data answers: live-data answer: purchase order lookup",
@@ -13788,7 +13724,7 @@
       "tags": []
     },
     {
-      "id": "TC-0853",
+      "id": "TC-0849",
       "module": "NextGenERP Assistant",
       "area": "Live data answers",
       "title": "Live data answers: live-data answer: catalog counts",
@@ -13804,7 +13740,7 @@
       "tags": []
     },
     {
-      "id": "TC-0854",
+      "id": "TC-0850",
       "module": "NextGenERP Assistant",
       "area": "Live data answers",
       "title": "Live data answers: live-data answer: empty database",
@@ -13820,7 +13756,7 @@
       "tags": []
     },
     {
-      "id": "TC-0855",
+      "id": "TC-0851",
       "module": "NextGenERP Assistant",
       "area": "Live data answers",
       "title": "Live data answers: live-data answer: many products",
@@ -13836,7 +13772,7 @@
       "tags": []
     },
     {
-      "id": "TC-0856",
+      "id": "TC-0852",
       "module": "NextGenERP Assistant",
       "area": "Live data answers",
       "title": "Live data answers: live-data answer: unicode product name",
@@ -13852,55 +13788,7 @@
       "tags": []
     },
     {
-      "id": "TC-0857",
-      "module": "NextGenERP Assistant",
-      "area": "Live data answers",
-      "title": "Live data answers: live-data answer: case-insensitive product name",
-      "type": "API",
-      "priority": "P2",
-      "steps": [
-        "Prepare the stated data and authenticate unless the scenario tests authentication.",
-        "Execute: Ask the described question against the current workspace snapshot",
-        "Inspect the status code, response body, and persisted database state."
-      ],
-      "expected": "The answer uses live data, respects list caps, and never invents records.",
-      "status": "not_run",
-      "tags": []
-    },
-    {
-      "id": "TC-0858",
-      "module": "NextGenERP Assistant",
-      "area": "Live data answers",
-      "title": "Live data answers: live-data answer: missing product",
-      "type": "API",
-      "priority": "P2",
-      "steps": [
-        "Prepare the stated data and authenticate unless the scenario tests authentication.",
-        "Execute: Ask the described question against the current workspace snapshot",
-        "Inspect the status code, response body, and persisted database state."
-      ],
-      "expected": "The answer uses live data, respects list caps, and never invents records.",
-      "status": "not_run",
-      "tags": []
-    },
-    {
-      "id": "TC-0859",
-      "module": "NextGenERP Assistant",
-      "area": "Live data answers",
-      "title": "Live data answers: live-data answer: deleted product",
-      "type": "API",
-      "priority": "P2",
-      "steps": [
-        "Prepare the stated data and authenticate unless the scenario tests authentication.",
-        "Execute: Ask the described question against the current workspace snapshot",
-        "Inspect the status code, response body, and persisted database state."
-      ],
-      "expected": "The answer uses live data, respects list caps, and never invents records.",
-      "status": "not_run",
-      "tags": []
-    },
-    {
-      "id": "TC-0860",
+      "id": "TC-0853",
       "module": "NextGenERP Assistant",
       "area": "Help topics",
       "title": "Help topics: help topic: add product",
@@ -13916,7 +13804,7 @@
       "tags": []
     },
     {
-      "id": "TC-0861",
+      "id": "TC-0854",
       "module": "NextGenERP Assistant",
       "area": "Help topics",
       "title": "Help topics: help topic: edit or delete product",
@@ -13932,7 +13820,7 @@
       "tags": []
     },
     {
-      "id": "TC-0862",
+      "id": "TC-0855",
       "module": "NextGenERP Assistant",
       "area": "Help topics",
       "title": "Help topics: help topic: record stock movement",
@@ -13948,7 +13836,7 @@
       "tags": []
     },
     {
-      "id": "TC-0863",
+      "id": "TC-0856",
       "module": "NextGenERP Assistant",
       "area": "Help topics",
       "title": "Help topics: help topic: create sales order",
@@ -13964,7 +13852,7 @@
       "tags": []
     },
     {
-      "id": "TC-0864",
+      "id": "TC-0857",
       "module": "NextGenERP Assistant",
       "area": "Help topics",
       "title": "Help topics: help topic: create purchase order",
@@ -13980,7 +13868,7 @@
       "tags": []
     },
     {
-      "id": "TC-0865",
+      "id": "TC-0858",
       "module": "NextGenERP Assistant",
       "area": "Help topics",
       "title": "Help topics: help topic: read demand forecast",
@@ -13996,39 +13884,7 @@
       "tags": []
     },
     {
-      "id": "TC-0866",
-      "module": "NextGenERP Assistant",
-      "area": "Help topics",
-      "title": "Help topics: help topic: sign in",
-      "type": "API",
-      "priority": "P2",
-      "steps": [
-        "Prepare the stated data and authenticate unless the scenario tests authentication.",
-        "Execute: Ask the described how-to question",
-        "Inspect the status code, response body, and persisted database state."
-      ],
-      "expected": "The answer names the correct page and steps, stays concise, and does not claim to perform the action.",
-      "status": "not_run",
-      "tags": []
-    },
-    {
-      "id": "TC-0867",
-      "module": "NextGenERP Assistant",
-      "area": "Help topics",
-      "title": "Help topics: help topic: roles and permissions",
-      "type": "API",
-      "priority": "P2",
-      "steps": [
-        "Prepare the stated data and authenticate unless the scenario tests authentication.",
-        "Execute: Ask the described how-to question",
-        "Inspect the status code, response body, and persisted database state."
-      ],
-      "expected": "The answer names the correct page and steps, stays concise, and does not claim to perform the action.",
-      "status": "not_run",
-      "tags": []
-    },
-    {
-      "id": "TC-0868",
+      "id": "TC-0859",
       "module": "NextGenERP Assistant",
       "area": "Help topics",
       "title": "Help topics: help topic: delete rules",
@@ -14044,7 +13900,7 @@
       "tags": []
     },
     {
-      "id": "TC-0869",
+      "id": "TC-0860",
       "module": "NextGenERP Assistant",
       "area": "Help topics",
       "title": "Help topics: help topic: common errors",
@@ -14060,7 +13916,7 @@
       "tags": []
     },
     {
-      "id": "TC-0870",
+      "id": "TC-0861",
       "module": "NextGenERP Assistant",
       "area": "LLM external provider",
       "title": "LLM external provider: external provider: provider success",
@@ -14080,7 +13936,7 @@
       "blocked_reason": "No external provider key is configured in this environment; the local fallback path is tested instead."
     },
     {
-      "id": "TC-0871",
+      "id": "TC-0862",
       "module": "NextGenERP Assistant",
       "area": "LLM external provider",
       "title": "LLM external provider: external provider: provider timeout",
@@ -14100,7 +13956,7 @@
       "blocked_reason": "No external provider key is configured in this environment; the local fallback path is tested instead."
     },
     {
-      "id": "TC-0872",
+      "id": "TC-0863",
       "module": "NextGenERP Assistant",
       "area": "LLM external provider",
       "title": "LLM external provider: external provider: provider 401",
@@ -14120,7 +13976,7 @@
       "blocked_reason": "No external provider key is configured in this environment; the local fallback path is tested instead."
     },
     {
-      "id": "TC-0873",
+      "id": "TC-0864",
       "module": "NextGenERP Assistant",
       "area": "LLM external provider",
       "title": "LLM external provider: external provider: provider 429",
@@ -14140,7 +13996,7 @@
       "blocked_reason": "No external provider key is configured in this environment; the local fallback path is tested instead."
     },
     {
-      "id": "TC-0874",
+      "id": "TC-0865",
       "module": "NextGenERP Assistant",
       "area": "LLM external provider",
       "title": "LLM external provider: external provider: custom base URL",
@@ -14160,7 +14016,7 @@
       "blocked_reason": "No external provider key is configured in this environment; the local fallback path is tested instead."
     },
     {
-      "id": "TC-0875",
+      "id": "TC-0866",
       "module": "NextGenERP Assistant",
       "area": "LLM local fallback",
       "title": "LLM local fallback: local LLM behavior: no key configured",
@@ -14176,7 +14032,7 @@
       "tags": []
     },
     {
-      "id": "TC-0876",
+      "id": "TC-0867",
       "module": "NextGenERP Assistant",
       "area": "LLM local fallback",
       "title": "LLM local fallback: local LLM behavior: provider request failure",
@@ -14192,23 +14048,7 @@
       "tags": []
     },
     {
-      "id": "TC-0877",
-      "module": "NextGenERP Assistant",
-      "area": "LLM local fallback",
-      "title": "LLM local fallback: local LLM behavior: invalid provider JSON",
-      "type": "API",
-      "priority": "P2",
-      "steps": [
-        "Prepare the stated data and authenticate unless the scenario tests authentication.",
-        "Execute: Exercise the assistant with the described provider configuration",
-        "Inspect the status code, response body, and persisted database state."
-      ],
-      "expected": "The assistant uses local mode, includes the strict scope prompt when a provider is called, and never leaks secrets.",
-      "status": "not_run",
-      "tags": []
-    },
-    {
-      "id": "TC-0878",
+      "id": "TC-0868",
       "module": "NextGenERP Assistant",
       "area": "LLM local fallback",
       "title": "LLM local fallback: local LLM behavior: key never returned in response",
@@ -14224,7 +14064,7 @@
       "tags": []
     },
     {
-      "id": "TC-0879",
+      "id": "TC-0869",
       "module": "NextGenERP Assistant",
       "area": "LLM local fallback",
       "title": "LLM local fallback: local LLM behavior: strict scope prompt sent",
@@ -14240,7 +14080,7 @@
       "tags": []
     },
     {
-      "id": "TC-0880",
+      "id": "TC-0870",
       "module": "NextGenERP Assistant",
       "area": "UI",
       "title": "UI: launcher is visible",
@@ -14254,10 +14094,10 @@
       "expected": "The panel is accessible, keeps the conversation, handles errors, and fits desktop and mobile layouts.",
       "status": "passed",
       "tags": [],
-      "evidence": "Puppeteer assistant-test.cjs, 2026-11-11: desktop and mobile assistant flow passed with no console errors."
+      "evidence": "Puppeteer assistant-test.cjs, 2026-11-11: launcher visible on desktop and mobile."
     },
     {
-      "id": "TC-0881",
+      "id": "TC-0871",
       "module": "NextGenERP Assistant",
       "area": "UI",
       "title": "UI: panel opens",
@@ -14271,10 +14111,10 @@
       "expected": "The panel is accessible, keeps the conversation, handles errors, and fits desktop and mobile layouts.",
       "status": "passed",
       "tags": [],
-      "evidence": "Puppeteer assistant-test.cjs, 2026-11-11: desktop and mobile assistant flow passed with no console errors."
+      "evidence": "Puppeteer assistant-test.cjs, 2026-11-11: panel opened from the launcher."
     },
     {
-      "id": "TC-0882",
+      "id": "TC-0872",
       "module": "NextGenERP Assistant",
       "area": "UI",
       "title": "UI: panel closes",
@@ -14288,10 +14128,10 @@
       "expected": "The panel is accessible, keeps the conversation, handles errors, and fits desktop and mobile layouts.",
       "status": "passed",
       "tags": [],
-      "evidence": "Puppeteer assistant-test.cjs, 2026-11-11: desktop and mobile assistant flow passed with no console errors."
+      "evidence": "Puppeteer assistant-test.cjs, 2026-11-11: close button removed the panel."
     },
     {
-      "id": "TC-0883",
+      "id": "TC-0873",
       "module": "NextGenERP Assistant",
       "area": "UI",
       "title": "UI: low-stock suggestion returns live answer",
@@ -14305,10 +14145,10 @@
       "expected": "The panel is accessible, keeps the conversation, handles errors, and fits desktop and mobile layouts.",
       "status": "passed",
       "tags": [],
-      "evidence": "Puppeteer assistant-test.cjs, 2026-11-11: desktop and mobile assistant flow passed with no console errors."
+      "evidence": "Puppeteer assistant-test.cjs, 2026-11-11: low-stock reply contained live DEMO- products."
     },
     {
-      "id": "TC-0884",
+      "id": "TC-0874",
       "module": "NextGenERP Assistant",
       "area": "UI",
       "title": "UI: help suggestion returns steps",
@@ -14322,10 +14162,10 @@
       "expected": "The panel is accessible, keeps the conversation, handles errors, and fits desktop and mobile layouts.",
       "status": "passed",
       "tags": [],
-      "evidence": "Puppeteer assistant-test.cjs, 2026-11-11: desktop and mobile assistant flow passed with no console errors."
+      "evidence": "Puppeteer assistant-test.cjs, 2026-11-11: add-product help returned step-by-step instructions."
     },
     {
-      "id": "TC-0885",
+      "id": "TC-0875",
       "module": "NextGenERP Assistant",
       "area": "UI",
       "title": "UI: off-topic question is refused",
@@ -14339,10 +14179,10 @@
       "expected": "The panel is accessible, keeps the conversation, handles errors, and fits desktop and mobile layouts.",
       "status": "passed",
       "tags": [],
-      "evidence": "Puppeteer assistant-test.cjs, 2026-11-11: desktop and mobile assistant flow passed with no console errors."
+      "evidence": "Puppeteer assistant-test.cjs, 2026-11-11: off-topic request returned the scope refusal."
     },
     {
-      "id": "TC-0886",
+      "id": "TC-0876",
       "module": "NextGenERP Assistant",
       "area": "UI",
       "title": "UI: mobile panel fits viewport",
@@ -14356,10 +14196,10 @@
       "expected": "The panel is accessible, keeps the conversation, handles errors, and fits desktop and mobile layouts.",
       "status": "passed",
       "tags": [],
-      "evidence": "Puppeteer assistant-test.cjs, 2026-11-11: desktop and mobile assistant flow passed with no console errors."
+      "evidence": "Puppeteer assistant-test.cjs, 2026-11-11: 390 px viewport, panel inside the viewport, zero horizontal overflow."
     },
     {
-      "id": "TC-0887",
+      "id": "TC-0877",
       "module": "NextGenERP Assistant",
       "area": "UI",
       "title": "UI: Escape closes panel",
@@ -14373,74 +14213,265 @@
       "expected": "The panel is accessible, keeps the conversation, handles errors, and fits desktop and mobile layouts.",
       "status": "passed",
       "tags": [],
-      "evidence": "Puppeteer assistant-test.cjs, 2026-11-11: desktop and mobile assistant flow passed with no console errors."
+      "evidence": "Puppeteer assistant-test.cjs, 2026-11-11: Escape removed the panel."
+    },
+    {
+      "id": "TC-0878",
+      "module": "NextGenERP Assistant",
+      "area": "Localization",
+      "title": "Localization: Hindi greeting returns a localized intro and suggestions",
+      "type": "API",
+      "priority": "P2",
+      "steps": [
+        "Prepare the stated data and authenticate unless the scenario tests authentication.",
+        "Execute: Send the described message to /assistant/chat with the stated language code",
+        "Inspect the status code, response body, and persisted database state."
+      ],
+      "expected": "The reply, suggestions and status labels use the selected language; the response echoes the language.",
+      "status": "passed",
+      "tags": [],
+      "evidence": "pytest backend/tests/test_assistant.py, 2026-11-11: test_assistant_localizes_greeting_and_suggestions returned language=hi with a Devanagari intro and suggestions."
+    },
+    {
+      "id": "TC-0879",
+      "module": "NextGenERP Assistant",
+      "area": "Localization",
+      "title": "Localization: Bengali greeting returns a localized intro and suggestions",
+      "type": "API",
+      "priority": "P2",
+      "steps": [
+        "Prepare the stated data and authenticate unless the scenario tests authentication.",
+        "Execute: Send the described message to /assistant/chat with the stated language code",
+        "Inspect the status code, response body, and persisted database state."
+      ],
+      "expected": "The reply, suggestions and status labels use the selected language; the response echoes the language.",
+      "status": "passed",
+      "tags": [],
+      "evidence": "pytest backend/tests/test_assistant.py, 2026-11-11: same test returned language=bn with a Bengali intro and suggestions."
+    },
+    {
+      "id": "TC-0880",
+      "module": "NextGenERP Assistant",
+      "area": "Localization",
+      "title": "Localization: Devanagari combining-mark greeting is recognized",
+      "type": "API",
+      "priority": "P2",
+      "steps": [
+        "Prepare the stated data and authenticate unless the scenario tests authentication.",
+        "Execute: Send the described message to /assistant/chat with the stated language code",
+        "Inspect the status code, response body, and persisted database state."
+      ],
+      "expected": "The reply, suggestions and status labels use the selected language; the response echoes the language.",
+      "status": "passed",
+      "tags": [],
+      "evidence": "pytest backend/tests/test_assistant.py, 2026-11-11: 'नमस्ते' returned the intro after _is_greeting preserved U+0900-U+097F combining marks."
+    },
+    {
+      "id": "TC-0881",
+      "module": "NextGenERP Assistant",
+      "area": "Localization",
+      "title": "Localization: Hindi live low-stock answer is localized",
+      "type": "API",
+      "priority": "P2",
+      "steps": [
+        "Prepare the stated data and authenticate unless the scenario tests authentication.",
+        "Execute: Send the described message to /assistant/chat with the stated language code",
+        "Inspect the status code, response body, and persisted database state."
+      ],
+      "expected": "The reply, suggestions and status labels use the selected language; the response echoes the language.",
+      "status": "passed",
+      "tags": [],
+      "evidence": "pytest backend/tests/test_assistant.py, 2026-11-11: test_assistant_localizes_live_low_stock_answers returned a Devanagari reply containing the live Hindi Widget record."
+    },
+    {
+      "id": "TC-0882",
+      "module": "NextGenERP Assistant",
+      "area": "Localization",
+      "title": "Localization: Bengali live low-stock answer is localized",
+      "type": "API",
+      "priority": "P2",
+      "steps": [
+        "Prepare the stated data and authenticate unless the scenario tests authentication.",
+        "Execute: Send the described message to /assistant/chat with the stated language code",
+        "Inspect the status code, response body, and persisted database state."
+      ],
+      "expected": "The reply, suggestions and status labels use the selected language; the response echoes the language.",
+      "status": "passed",
+      "tags": [],
+      "evidence": "pytest backend/tests/test_assistant.py, 2026-11-11: same test returned a Bengali reply containing the live Hindi Widget record."
+    },
+    {
+      "id": "TC-0883",
+      "module": "NextGenERP Assistant",
+      "area": "Localization",
+      "title": "Localization: localized help topic answer",
+      "type": "API",
+      "priority": "P2",
+      "steps": [
+        "Prepare the stated data and authenticate unless the scenario tests authentication.",
+        "Execute: Send the described message to /assistant/chat with the stated language code",
+        "Inspect the status code, response body, and persisted database state."
+      ],
+      "expected": "The reply, suggestions and status labels use the selected language; the response echoes the language.",
+      "status": "passed",
+      "tags": [],
+      "evidence": "pytest backend/tests/test_assistant.py, 2026-11-11: test_assistant_localizes_help_and_scope_refusal returned Hindi and Bengali add-product steps with SKU guidance."
+    },
+    {
+      "id": "TC-0884",
+      "module": "NextGenERP Assistant",
+      "area": "Localization",
+      "title": "Localization: localized scope refusal in Hindi and Bengali",
+      "type": "API",
+      "priority": "P2",
+      "steps": [
+        "Prepare the stated data and authenticate unless the scenario tests authentication.",
+        "Execute: Send the described message to /assistant/chat with the stated language code",
+        "Inspect the status code, response body, and persisted database state."
+      ],
+      "expected": "The reply, suggestions and status labels use the selected language; the response echoes the language.",
+      "status": "passed",
+      "tags": [],
+      "evidence": "pytest backend/tests/test_assistant.py, 2026-11-11: Hindi refusal contained 'केवल NextGenERP'; Bengali refusal contained 'শুধু NextGenERP'."
+    },
+    {
+      "id": "TC-0885",
+      "module": "NextGenERP Assistant",
+      "area": "Localization",
+      "title": "Localization: unsupported language code is rejected",
+      "type": "API",
+      "priority": "P2",
+      "steps": [
+        "Prepare the stated data and authenticate unless the scenario tests authentication.",
+        "Execute: Send the described message to /assistant/chat with the stated language code",
+        "Inspect the status code, response body, and persisted database state."
+      ],
+      "expected": "The reply, suggestions and status labels use the selected language; the response echoes the language.",
+      "status": "passed",
+      "tags": [],
+      "evidence": "pytest backend/tests/test_assistant.py, 2026-11-11: test_assistant_rejects_unsupported_language returned 422 for language=fr."
+    },
+    {
+      "id": "TC-0886",
+      "module": "NextGenERP Assistant",
+      "area": "Localization",
+      "title": "Localization: LLM receives an explicit language instruction",
+      "type": "API",
+      "priority": "P2",
+      "steps": [
+        "Prepare the stated data and authenticate unless the scenario tests authentication.",
+        "Execute: Send the described message to /assistant/chat with the stated language code",
+        "Inspect the status code, response body, and persisted database state."
+      ],
+      "expected": "The reply, suggestions and status labels use the selected language; the response echoes the language.",
+      "status": "passed",
+      "tags": [],
+      "evidence": "pytest backend/tests/test_assistant.py, 2026-11-11: mocked provider payload contained 'Hindi using Devanagari script'; response mode=llm, language=hi."
+    },
+    {
+      "id": "TC-0887",
+      "module": "NextGenERP Assistant",
+      "area": "Voice UI",
+      "title": "Voice UI: language selector lists English, Hindi and Bengali",
+      "type": "UI",
+      "priority": "P2",
+      "steps": [
+        "Sign in with a valid account and open the relevant screen.",
+        "Perform: Use the assistant panel with the described voice or language control",
+        "Verify the visible result, keyboard/focus behavior, and the browser console."
+      ],
+      "expected": "The panel exposes voice controls only when the browser supports them and keeps the selected language across the conversation.",
+      "status": "passed",
+      "tags": [],
+      "evidence": "Puppeteer assistant-voice-test.cjs, 2026-11-11: options were en/English, hi/हिन्दी and bn/বাংলা."
     },
     {
       "id": "TC-0888",
       "module": "NextGenERP Assistant",
-      "area": "UI",
-      "title": "UI: clear conversation",
+      "area": "Voice UI",
+      "title": "Voice UI: language switch updates welcome and suggestions",
       "type": "UI",
       "priority": "P2",
       "steps": [
         "Sign in with a valid account and open the relevant screen.",
-        "Perform: Use the assistant panel in the described state",
+        "Perform: Use the assistant panel with the described voice or language control",
         "Verify the visible result, keyboard/focus behavior, and the browser console."
       ],
-      "expected": "The panel is accessible, keeps the conversation, handles errors, and fits desktop and mobile layouts.",
-      "status": "not_run",
-      "tags": []
+      "expected": "The panel exposes voice controls only when the browser supports them and keeps the selected language across the conversation.",
+      "status": "passed",
+      "tags": [],
+      "evidence": "Puppeteer assistant-voice-test.cjs, 2026-11-11: Hindi and Bengali welcome text and suggestion chips appeared after switching; the launcher kept the Bengali label after close."
     },
     {
       "id": "TC-0889",
       "module": "NextGenERP Assistant",
-      "area": "UI",
-      "title": "UI: suggestion chips",
+      "area": "Voice UI",
+      "title": "Voice UI: microphone control is enabled when supported",
       "type": "UI",
       "priority": "P2",
       "steps": [
         "Sign in with a valid account and open the relevant screen.",
-        "Perform: Use the assistant panel in the described state",
+        "Perform: Use the assistant panel with the described voice or language control",
         "Verify the visible result, keyboard/focus behavior, and the browser console."
       ],
-      "expected": "The panel is accessible, keeps the conversation, handles errors, and fits desktop and mobile layouts.",
-      "status": "not_run",
-      "tags": []
+      "expected": "The panel exposes voice controls only when the browser supports them and keeps the selected language across the conversation.",
+      "status": "passed",
+      "tags": [],
+      "evidence": "Puppeteer assistant-voice-test.cjs, 2026-11-11: headless Edge reported recognition=true and the mic button was enabled; actual audio capture was not exercised."
     },
     {
       "id": "TC-0890",
       "module": "NextGenERP Assistant",
-      "area": "UI",
-      "title": "UI: retry after error",
+      "area": "Voice UI",
+      "title": "Voice UI: speaker play/stop and auto-speak toggle",
       "type": "UI",
       "priority": "P2",
       "steps": [
         "Sign in with a valid account and open the relevant screen.",
-        "Perform: Use the assistant panel in the described state",
+        "Perform: Use the assistant panel with the described voice or language control",
         "Verify the visible result, keyboard/focus behavior, and the browser console."
       ],
-      "expected": "The panel is accessible, keeps the conversation, handles errors, and fits desktop and mobile layouts.",
-      "status": "not_run",
-      "tags": []
+      "expected": "The panel exposes voice controls only when the browser supports them and keeps the selected language across the conversation.",
+      "status": "passed",
+      "tags": [],
+      "evidence": "Puppeteer assistant-voice-test.cjs, 2026-11-11: auto-speak toggled on/off and the speaker button changed to the stop state; no console errors."
     },
     {
       "id": "TC-0891",
       "module": "NextGenERP Assistant",
-      "area": "UI",
-      "title": "UI: focus and scroll behavior",
+      "area": "Voice UI",
+      "title": "Voice UI: actual microphone capture and permission grant",
       "type": "UI",
       "priority": "P2",
       "steps": [
         "Sign in with a valid account and open the relevant screen.",
-        "Perform: Use the assistant panel in the described state",
+        "Perform: Use the assistant panel with the described voice or language control",
         "Verify the visible result, keyboard/focus behavior, and the browser console."
       ],
-      "expected": "The panel is accessible, keeps the conversation, handles errors, and fits desktop and mobile layouts.",
-      "status": "not_run",
-      "tags": []
+      "expected": "The panel exposes voice controls only when the browser supports them and keeps the selected language across the conversation.",
+      "status": "blocked",
+      "tags": [],
+      "blocked_reason": "Headless Edge cannot grant a real microphone permission or provide audio input; only the controls and error paths were verified."
     },
     {
       "id": "TC-0892",
+      "module": "NextGenERP Assistant",
+      "area": "Voice UI",
+      "title": "Voice UI: cross-browser voice support",
+      "type": "UI",
+      "priority": "P2",
+      "steps": [
+        "Sign in with a valid account and open the relevant screen.",
+        "Perform: Use the assistant panel with the described voice or language control",
+        "Verify the visible result, keyboard/focus behavior, and the browser console."
+      ],
+      "expected": "The panel exposes voice controls only when the browser supports them and keeps the selected language across the conversation.",
+      "status": "blocked",
+      "tags": [],
+      "blocked_reason": "Only headless Microsoft Edge is available; Firefox and Safari Web Speech behavior is not tested."
+    },
+    {
+      "id": "TC-0893",
       "module": "NextGenERP Assistant",
       "area": "Security and privacy",
       "title": "Security and privacy: assistant security: authentication required",
@@ -14456,7 +14487,7 @@
       "tags": []
     },
     {
-      "id": "TC-0893",
+      "id": "TC-0894",
       "module": "NextGenERP Assistant",
       "area": "Security and privacy",
       "title": "Security and privacy: assistant security: blank message rejected",
@@ -14472,7 +14503,7 @@
       "tags": []
     },
     {
-      "id": "TC-0894",
+      "id": "TC-0895",
       "module": "NextGenERP Assistant",
       "area": "Security and privacy",
       "title": "Security and privacy: assistant security: oversized message rejected",
@@ -14488,26 +14519,10 @@
       "tags": []
     },
     {
-      "id": "TC-0895",
-      "module": "NextGenERP Assistant",
-      "area": "Security and privacy",
-      "title": "Security and privacy: assistant security: over-long history rejected",
-      "type": "API",
-      "priority": "P2",
-      "steps": [
-        "Prepare the stated data and authenticate unless the scenario tests authentication.",
-        "Execute: Send the described request to /assistant/chat",
-        "Inspect the status code, response body, and persisted database state."
-      ],
-      "expected": "The endpoint enforces authentication and limits, refuses out-of-scope requests, and never leaks secrets.",
-      "status": "not_run",
-      "tags": []
-    },
-    {
       "id": "TC-0896",
       "module": "NextGenERP Assistant",
       "area": "Security and privacy",
-      "title": "Security and privacy: assistant security: invalid role rejected",
+      "title": "Security and privacy: assistant security: over-long history rejected",
       "type": "API",
       "priority": "P2",
       "steps": [

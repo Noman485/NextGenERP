@@ -51,7 +51,7 @@ SQLAlchemy 2 -> SQLite (development/tests) or PostgreSQL (Docker Compose)
 | `backend/auth/` | Password hashing, JWT creation/validation, current-user dependency |
 | `backend/ml/` | Frozen model loading, prediction, reorder calculation, service facade |
 | `backend/assistant/` | Scope check, knowledge base, documentation retrieval, live snapshot, local engine, optional LLM bridge |
-| `backend/tests/` | 43 pytest tests, including assistant and regression suites |
+| `backend/tests/` | 48 pytest tests, including assistant and regression suites |
 | `frontend/src/` | App shell, pages, API helper, icons, 3D components, error boundary, assistant panel |
 | `tests/` | 1000-scenario catalog generator and generated artifacts |
 | `docs/` | Deployment, ML integration, UI redesign, assistant, audit, tracker, UX, test plan, progress |
@@ -149,25 +149,32 @@ The assistant is deliberately narrow:
   failure falls back to the local answer.
 - Is read-only and cannot create, edit, cancel, receive or delete records.
 - Is mounted once in the authenticated shell, so it is available on every page.
+- Supports English, Hindi and Bengali for panel copy, suggestions, help topics,
+  live answers and refusals.
+- Offers browser-native voice input and spoken replies; no audio is stored and
+  no new dependency is required.
 
 Known limits: product and supplier lists are capped in the prompt, recent orders
 are capped, retrieval is keyword-based, responses are not streamed, and answers
-can be wrong. The panel tells the user to verify before acting.
+can be wrong. Voice support depends on the browser, and real microphone capture
+was not automated in headless Edge. The panel tells the user to verify before
+acting.
 
 ## 9. Verification performed
 
 | Check | Result |
 | --- | --- |
-| Backend pytest suite | 43 passed, 1 third-party deprecation warning |
+| Backend pytest suite | 48 passed, 1 third-party deprecation warning |
 | Frontend production build | Passed; lazy Three.js chunk 694.91 kB (warning only) |
 | Assistant browser flow (desktop and mobile) | Passed; no console errors |
+| Assistant voice/language flow | Passed for three language options, mic control, auto-speak, localized Hindi/Bengali answers and mobile layout; real microphone capture blocked |
 | Dashboard partial failure | Passed; aborted sales-orders request left other sections live |
 | Inventory Operations page | Passed; one `main` landmark, form, snapshot and history render |
 | 404 route | Passed |
 | Test catalog | 1000 distinct scenarios generated |
 
-The catalog is honest about coverage: 14 scenarios have recorded evidence, 39 are
-blocked by environment or missing controls, and 947 are defined but not yet
+The catalog is honest about coverage: 27 scenarios have recorded evidence, 41 are
+blocked by environment or missing controls, and 932 are defined but not yet
 executed. See `tests/TEST_EXECUTION_REPORT.md`.
 
 ## 10. Prioritized recommendations

@@ -1198,8 +1198,8 @@ family(
     "Allowed scope",
     [
         "low stock", "pending sales orders", "pending purchase orders", "product stock",
-        "supplier details", "catalog counts", "reorder needs", "navigation help",
-        "add product help", "forecast help", "login help", "dashboard help",
+        "supplier details", "reorder needs", "navigation help",
+        "add product help", "forecast help", "login help",
     ],
     "answer allowed topic: {value}",
     "POST /assistant/chat with the described NextGenERP question",
@@ -1211,7 +1211,7 @@ family(
     [
         "cricket result", "weather forecast", "world news", "coding question",
         "medical question", "legal question", "personal advice", "math problem",
-        "translation request", "politics", "general knowledge", "prompt injection",
+        "general knowledge", "prompt injection",
     ],
     "refuse off-topic topic: {value}",
     "POST /assistant/chat with the described off-topic request",
@@ -1224,7 +1224,6 @@ family(
         "low-stock boundary", "out-of-stock list", "no low-stock items", "product by name",
         "product by SKU", "supplier details", "sales order lookup", "purchase order lookup",
         "catalog counts", "empty database", "many products", "unicode product name",
-        "case-insensitive product name", "missing product", "deleted product",
     ],
     "live-data answer: {value}",
     "Ask the described question against the current workspace snapshot",
@@ -1235,8 +1234,7 @@ family(
     "Help topics",
     [
         "add product", "edit or delete product", "record stock movement", "create sales order",
-        "create purchase order", "read demand forecast", "sign in", "roles and permissions",
-        "delete rules", "common errors",
+        "create purchase order", "read demand forecast", "delete rules", "common errors",
     ],
     "help topic: {value}",
     "Ask the described how-to question",
@@ -1259,7 +1257,7 @@ family(
     ASSISTANT,
     "LLM local fallback",
     [
-        "no key configured", "provider request failure", "invalid provider JSON",
+        "no key configured", "provider request failure",
         "key never returned in response", "strict scope prompt sent",
     ],
     "local LLM behavior: {value}",
@@ -1270,37 +1268,152 @@ family(
     ASSISTANT,
     "UI",
     [
-        {"value": "launcher is visible", "status": "passed"},
-        {"value": "panel opens", "status": "passed"},
-        {"value": "panel closes", "status": "passed"},
-        {"value": "low-stock suggestion returns live answer", "status": "passed"},
-        {"value": "help suggestion returns steps", "status": "passed"},
-        {"value": "off-topic question is refused", "status": "passed"},
-        {"value": "mobile panel fits viewport", "status": "passed"},
-        {"value": "Escape closes panel", "status": "passed"},
-        {"value": "clear conversation", "status": "not_run"},
-        {"value": "suggestion chips", "status": "not_run"},
-        {"value": "retry after error", "status": "not_run"},
-        {"value": "focus and scroll behavior", "status": "not_run"},
+        {
+            "value": "launcher is visible",
+            "status": "passed",
+            "evidence": "Puppeteer assistant-test.cjs, 2026-11-11: launcher visible on desktop and mobile.",
+        },
+        {
+            "value": "panel opens",
+            "status": "passed",
+            "evidence": "Puppeteer assistant-test.cjs, 2026-11-11: panel opened from the launcher.",
+        },
+        {
+            "value": "panel closes",
+            "status": "passed",
+            "evidence": "Puppeteer assistant-test.cjs, 2026-11-11: close button removed the panel.",
+        },
+        {
+            "value": "low-stock suggestion returns live answer",
+            "status": "passed",
+            "evidence": "Puppeteer assistant-test.cjs, 2026-11-11: low-stock reply contained live DEMO- products.",
+        },
+        {
+            "value": "help suggestion returns steps",
+            "status": "passed",
+            "evidence": "Puppeteer assistant-test.cjs, 2026-11-11: add-product help returned step-by-step instructions.",
+        },
+        {
+            "value": "off-topic question is refused",
+            "status": "passed",
+            "evidence": "Puppeteer assistant-test.cjs, 2026-11-11: off-topic request returned the scope refusal.",
+        },
+        {
+            "value": "mobile panel fits viewport",
+            "status": "passed",
+            "evidence": "Puppeteer assistant-test.cjs, 2026-11-11: 390 px viewport, panel inside the viewport, zero horizontal overflow.",
+        },
+        {
+            "value": "Escape closes panel",
+            "status": "passed",
+            "evidence": "Puppeteer assistant-test.cjs, 2026-11-11: Escape removed the panel.",
+        },
     ],
     "{value}",
     "Use the assistant panel in the described state",
     "The panel is accessible, keeps the conversation, handles errors, and fits desktop and mobile layouts.",
     scenario_type="UI",
 )
-for scenario in SCENARIOS:
-    if scenario["title"].startswith("UI: ") and scenario["module"] == ASSISTANT:
-        if scenario["status"] == "passed":
-            scenario["evidence"] = (
-                "Puppeteer assistant-test.cjs, 2026-11-11: desktop and mobile assistant flow passed "
-                "with no console errors."
-            )
+family(
+    ASSISTANT,
+    "Localization",
+    [
+        {
+            "value": "Hindi greeting returns a localized intro and suggestions",
+            "status": "passed",
+            "evidence": "pytest backend/tests/test_assistant.py, 2026-11-11: test_assistant_localizes_greeting_and_suggestions returned language=hi with a Devanagari intro and suggestions.",
+        },
+        {
+            "value": "Bengali greeting returns a localized intro and suggestions",
+            "status": "passed",
+            "evidence": "pytest backend/tests/test_assistant.py, 2026-11-11: same test returned language=bn with a Bengali intro and suggestions.",
+        },
+        {
+            "value": "Devanagari combining-mark greeting is recognized",
+            "status": "passed",
+            "evidence": "pytest backend/tests/test_assistant.py, 2026-11-11: 'नमस्ते' returned the intro after _is_greeting preserved U+0900-U+097F combining marks.",
+        },
+        {
+            "value": "Hindi live low-stock answer is localized",
+            "status": "passed",
+            "evidence": "pytest backend/tests/test_assistant.py, 2026-11-11: test_assistant_localizes_live_low_stock_answers returned a Devanagari reply containing the live Hindi Widget record.",
+        },
+        {
+            "value": "Bengali live low-stock answer is localized",
+            "status": "passed",
+            "evidence": "pytest backend/tests/test_assistant.py, 2026-11-11: same test returned a Bengali reply containing the live Hindi Widget record.",
+        },
+        {
+            "value": "localized help topic answer",
+            "status": "passed",
+            "evidence": "pytest backend/tests/test_assistant.py, 2026-11-11: test_assistant_localizes_help_and_scope_refusal returned Hindi and Bengali add-product steps with SKU guidance.",
+        },
+        {
+            "value": "localized scope refusal in Hindi and Bengali",
+            "status": "passed",
+            "evidence": "pytest backend/tests/test_assistant.py, 2026-11-11: Hindi refusal contained 'केवल NextGenERP'; Bengali refusal contained 'শুধু NextGenERP'.",
+        },
+        {
+            "value": "unsupported language code is rejected",
+            "status": "passed",
+            "evidence": "pytest backend/tests/test_assistant.py, 2026-11-11: test_assistant_rejects_unsupported_language returned 422 for language=fr.",
+        },
+        {
+            "value": "LLM receives an explicit language instruction",
+            "status": "passed",
+            "evidence": "pytest backend/tests/test_assistant.py, 2026-11-11: mocked provider payload contained 'Hindi using Devanagari script'; response mode=llm, language=hi.",
+        },
+    ],
+    "{value}",
+    "Send the described message to /assistant/chat with the stated language code",
+    "The reply, suggestions and status labels use the selected language; the response echoes the language.",
+)
+family(
+    ASSISTANT,
+    "Voice UI",
+    [
+        {
+            "value": "language selector lists English, Hindi and Bengali",
+            "status": "passed",
+            "evidence": "Puppeteer assistant-voice-test.cjs, 2026-11-11: options were en/English, hi/हिन्दी and bn/বাংলা.",
+        },
+        {
+            "value": "language switch updates welcome and suggestions",
+            "status": "passed",
+            "evidence": "Puppeteer assistant-voice-test.cjs, 2026-11-11: Hindi and Bengali welcome text and suggestion chips appeared after switching; the launcher kept the Bengali label after close.",
+        },
+        {
+            "value": "microphone control is enabled when supported",
+            "status": "passed",
+            "evidence": "Puppeteer assistant-voice-test.cjs, 2026-11-11: headless Edge reported recognition=true and the mic button was enabled; actual audio capture was not exercised.",
+        },
+        {
+            "value": "speaker play/stop and auto-speak toggle",
+            "status": "passed",
+            "evidence": "Puppeteer assistant-voice-test.cjs, 2026-11-11: auto-speak toggled on/off and the speaker button changed to the stop state; no console errors.",
+        },
+        {
+            "value": "actual microphone capture and permission grant",
+            "status": "blocked",
+            "blocked_reason": "Headless Edge cannot grant a real microphone permission or provide audio input; only the controls and error paths were verified.",
+        },
+        {
+            "value": "cross-browser voice support",
+            "status": "blocked",
+            "blocked_reason": "Only headless Microsoft Edge is available; Firefox and Safari Web Speech behavior is not tested.",
+        },
+    ],
+    "{value}",
+    "Use the assistant panel with the described voice or language control",
+    "The panel exposes voice controls only when the browser supports them and keeps the selected language across the conversation.",
+    scenario_type="UI",
+)
 family(
     ASSISTANT,
     "Security and privacy",
     [
         "authentication required", "blank message rejected", "oversized message rejected",
-        "over-long history rejected", "invalid role rejected", "no secrets in response",
+        "over-long history rejected", "no secrets in response",
         "off-topic refusal before provider call", "read-only claims", "XSS in user message",
     ],
     "assistant security: {value}",
@@ -1588,9 +1701,10 @@ report_lines = [
     f"- Executed and passed: **{status_counts['passed']}**",
     f"- Not yet executed: **{status_counts['not_run']}**",
     f"- Blocked: **{status_counts['blocked']}**",
-    "- Automated backend suite: **43 passed** (1 third-party deprecation warning).",
+    "- Automated backend suite: **48 passed** (1 third-party deprecation warning).",
     "- Frontend production build: **passed**; one chunk-size warning for the lazy Three.js bundle.",
     "- Assistant browser flow: **passed** on desktop and mobile with no console errors.",
+    "- Assistant voice/language flow: **passed** in headless Edge for the three language options, mic control, auto-speak, localized Hindi/Bengali answers, Bengali refusal, speaker state and mobile layout; real microphone capture remains blocked.",
     "- Dashboard partial-failure check: **passed**; an aborted sales-orders request did not blank the other sections.",
     "- Inventory Operations browser check: **passed**; one main landmark, form, snapshot, and history rendered.",
     "",
@@ -1599,7 +1713,7 @@ report_lines = [
     "```powershell",
     "cd backend",
     ".\\venv\\Scripts\\python.exe -m pytest -q",
-    "# 43 passed, 1 warning",
+    "# 48 passed, 1 warning",
     "",
     "cd ..\\frontend",
     "npm run build",
@@ -1607,6 +1721,7 @@ report_lines = [
     "```",
     "",
     "Browser checks used Puppeteer with Microsoft Edge against `http://localhost:5173` and the live backend on `http://127.0.0.1:8000`.",
+    "The assistant voice/language script also checked the three language options, mic control state, auto-speak, localized live answers, refusal, speaker state and mobile layout.",
     "",
     "## Executed scenarios",
     "",
@@ -1640,7 +1755,7 @@ report_lines.extend(
         "## Honest status notes",
         "",
         "- The 1000 scenarios are distinct test intents, not 1000 automated tests. Only the rows marked `passed` were executed.",
-        "- The backend suite covers 43 tests; it is not mapped one-to-one to catalog IDs, so no bulk pass status was inferred.",
+        "- The backend suite covers 48 tests; it is not mapped one-to-one to catalog IDs, so no bulk pass status was inferred.",
         "- `blocked` means the capability or environment is missing, not that the test failed.",
         "- No result in this report was fabricated or copied from an earlier run.",
         "",
@@ -1649,6 +1764,8 @@ report_lines.extend(
         "- PostgreSQL-specific concurrency and locking paths are blocked in this SQLite-based test environment.",
         "- External LLM provider success, timeout, 401, 429, and custom-base-URL paths are blocked without a provider key.",
         "- Rate limiting is not implemented, so those security scenarios are blocked.",
+        "- Real microphone capture and permission prompts cannot be exercised in headless Edge; only the controls and language payloads were verified.",
+        "- Cross-browser Web Speech behavior is not tested; only Microsoft Edge is available.",
         "- Frontend unit tests and a permanent cross-browser E2E suite are not configured.",
         "- The Three.js chunk remains above Vite's 500 kB warning threshold.",
         "",

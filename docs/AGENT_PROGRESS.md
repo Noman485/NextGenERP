@@ -12,13 +12,14 @@ every command.
 
 | Area | Status |
 | --- | --- |
-| Backend test suite | 43 passed, 1 third-party deprecation warning |
+| Backend test suite | 48 passed, 1 third-party deprecation warning |
 | Frontend production build | Passed; lazy Three.js chunk 694.91 kB (warning only) |
 | In-app assistant | Implemented, tested and browser-verified on desktop and mobile |
+| Assistant languages and voice | English/Hindi/Bengali localization plus browser voice input/output; verified in headless Edge |
 | Dashboard partial loading | Implemented and verified by aborting a request |
 | Inventory Operations redesign | Implemented and browser-verified |
 | Required documentation | Complete |
-| 1000-scenario catalog | Generated: 14 passed, 39 blocked, 947 not_run |
+| 1000-scenario catalog | Generated: 27 passed, 41 blocked, 932 not_run |
 | Git | Work is uncommitted at the time of writing; push pending |
 
 ## Work completed
@@ -36,33 +37,53 @@ Decisions:
 - Grounded in live data. A snapshot of products, suppliers, sales orders and
   purchase orders is built per request.
 - Mounted once in the authenticated shell so it is available on every page.
+- Multilingual by design. English, Hindi and Bengali share one engine; localized
+  copy, keywords, status labels and templates live in one module.
+- Voice uses browser-native APIs only: `SpeechRecognition` for input and
+  `speechSynthesis` for output. No new dependency, no stored audio and no
+  server-side speech service.
+- Language changes reset the conversation so scripts and context do not mix;
+  auto-speak is off by default and every answer has its own speaker control.
 
 Files:
 
 - `backend/assistant/knowledge.py` — curated topics and suggestion chips.
+- `backend/assistant/localization.py` — language metadata, localized copy,
+  keywords, status labels, reply templates and the LLM language instruction.
 - `backend/assistant/docs.py` — keyword retrieval over project docs.
 - `backend/assistant/snapshot.py` — read-only workspace snapshot.
 - `backend/assistant/engine.py` — scope check, intent routing, live answers,
-  LLM orchestration and fallback.
+  localization, LLM orchestration and fallback.
 - `backend/assistant/llm.py` — OpenAI-compatible bridge with a strict system
-  prompt.
+  prompt and explicit language instruction.
 - `backend/routes/assistant.py` — authenticated `POST /assistant/chat`.
-- `backend/schemas/assistant.py` — request/response validation.
-- `frontend/src/components/Assistant.jsx` — floating panel, suggestions, retry,
-  Escape close, mobile layout.
+- `backend/schemas/assistant.py` — request/response validation, including the
+  `language` field.
+- `frontend/src/components/Assistant.jsx` — floating panel, language selector,
+  microphone input, spoken replies, auto-speak, suggestions, retry, Escape close
+  and mobile layout.
 - `frontend/src/App.jsx` — shell integration.
-- `frontend/src/components/Icons.jsx` — `send` icon.
-- `docs/ai-assistant.md` — architecture, config, API, privacy, testing.
+- `frontend/src/components/Icons.jsx` — `send`, `mic`, `volume`, `volumeOff` and
+  `globe` icons.
+- `docs/ai-assistant.md` — architecture, config, API, privacy, languages, voice
+  and testing.
 - `.env.example` — commented provider variables.
 
 Verification:
 
-- `backend/tests/test_assistant.py`: 11 tests covering authentication, limits,
+- `backend/tests/test_assistant.py`: 16 tests covering authentication, limits,
   greeting, refusal, live low stock, stock lookup, pending sales, help topics,
-  catalog counts, provider fallback and prompt/key handling.
+  catalog counts, provider fallback, prompt/key handling, Hindi/Bengali
+  greetings, localized live answers, localized help/refusal, unsupported
+  language rejection and the LLM language instruction.
 - Browser E2E on desktop and mobile: launcher, open, live low-stock answer, help
   answer, scope refusal, close, 404 route, mobile chat, Escape close, zero
   horizontal overflow, no console errors.
+- Voice/language E2E: three language options, mic control enabled in Edge,
+  auto-speak toggle, Hindi and Bengali welcome/suggestions, localized live
+  low-stock answers, Bengali scope refusal, localized launcher, speaker
+  play/stop state, 366 × 544 px mobile panel and zero horizontal overflow.
+  Real microphone capture and permission prompts remain a manual check.
 
 ### 2. Stabilization fixes
 
@@ -94,7 +115,20 @@ Verification:
 
 Details are in `docs/UX_IMPROVEMENTS.md`.
 
-### 4. Test catalog
+### 4. Demo data
+
+- Added `backend/seed_demo_data.py`, an idempotent seed script that preserves
+  existing records and tops up short modules.
+- Live workspace now has at least 100 rows in every business module: 100
+  categories, 100 products, 100 suppliers, 100 sales orders, 100 purchase
+  orders and 143 inventory-history rows.
+- Stock movements go through `services/inventory.change_stock`, so sales
+  deductions, cancellations and purchase receipts keep stock and history
+  consistent.
+- `DEMO-` SKUs are used for browser checks; 3 products are out of stock and 11
+  are low stock, with no negative stock.
+
+### 5. Test catalog
 
 - `tests/generate_test_cases.py` deterministically builds 1000 distinct
   scenarios across twelve modules and writes:
@@ -104,15 +138,17 @@ Details are in `docs/UX_IMPROVEMENTS.md`.
 - Counts are asserted by the generator: Authentication 80, Dashboard 60,
   Products 100, Categories 60, Suppliers 90, Inventory 110, Sales 120, Purchases
   120, Forecasting 80, Assistant 80, Navigation 50, Security 50.
-- Statuses are honest: 14 passed with evidence, 39 blocked with reasons, 947
+- Statuses are honest: 27 passed with evidence, 41 blocked with reasons, 932
   not_run.
+- Assistant coverage includes 9 localization scenarios and 6 voice UI scenarios;
+  the two voice environment checks are blocked rather than claimed as passed.
 - The generator rejects duplicate titles and enforces module counts.
 
-### 5. Documentation
+### 6. Documentation
 
 - `docs/PROJECT_AUDIT.md` — architecture, data model, API surface, security
   posture, verification, risks and recommendations.
-- `docs/BUG_TRACKER.md` — 14 fixed defects, 9 open issues, blocked verification
+- `docs/BUG_TRACKER.md` — 15 fixed defects, 9 open issues, blocked verification
   and triage rules.
 - `docs/UX_IMPROVEMENTS.md` — before/after UX changes and remaining
   opportunities.
@@ -154,24 +190,25 @@ Details are in `docs/UX_IMPROVEMENTS.md`.
 
 | Check | Evidence |
 | --- | --- |
-| Backend suite | 43 passed in 25.95 s, 1 Starlette deprecation warning |
-| Production build | Built in 2.37 s; `three.module` 694.91 kB |
+| Backend suite | 48 passed, 1 Starlette deprecation warning |
+| Production build | Built successfully; `three.module` 694.91 kB |
 | Assistant E2E | Desktop and mobile flow passed; console errors none |
+| Assistant voice/language E2E | Three language options, mic control, auto-speak, Hindi/Bengali live answers, Bengali refusal, speaker state, mobile layout; console errors none |
 | Dashboard partial failure | Banner shown; products and low-stock data stayed live; sales section unavailable |
 | Inventory page | One `main`; form, snapshot and history present |
 | Catalog | 1000 unique IDs, 1000 unique titles, no missing steps or expected results |
 
 ## Remaining work
 
-1. Rerun the backend suite and production build after the final copy/doc edits.
-2. Rerun the assistant and stabilization browser checks; confirm no React key
-   warnings on Sales Orders and Purchase Orders.
-3. Review the generated catalog and docs for consistency with the final code.
-4. Commit all work and push to `origin main`.
-5. After push, run the blocked PostgreSQL concurrency suite in an environment
+1. Commit all work and push to `origin main`.
+2. Run a manual microphone-permission and audio-capture check in a real browser
+   session; headless Edge cannot exercise the device.
+3. After push, run the blocked PostgreSQL concurrency suite in an environment
    that has PostgreSQL.
-6. Implement rate limiting and security headers (see `docs/BUG_TRACKER.md`).
-7. Add a committed frontend test runner and E2E suite.
+4. Implement rate limiting and security headers (see `docs/BUG_TRACKER.md`).
+5. Add a committed frontend test runner and E2E suite.
+6. Recheck the assistant at 320 px, 768 px and 200% zoom; add a tablet pass for
+   the purchase-order table.
 
 ## Constraints to preserve
 

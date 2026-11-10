@@ -1,10 +1,14 @@
 import requests
 
 
-def ask(client, message, history=None):
+def ask(client, message, history=None, language="en"):
     return client.post(
         "/assistant/chat",
-        json={"message": message, "history": history or []},
+        json={
+            "message": message,
+            "history": history or [],
+            "language": language,
+        },
     )
 
 
@@ -189,4 +193,139 @@ def test_assistant_uses_llm_with_project_scope_when_configured(
     ]
     assert any("NextGenERP" in prompt for prompt in system_prompts)
     assert any("STRICT SCOPE" in prompt for prompt in system_prompts)
+    assert "test-key-not-real" not in data["reply"]
+
+
+def test_assistant_localizes_greeting_and_suggestions(client):
+    hindi = ask(client, "नमस्ते", language="hi")
+    assert hindi.status_code == 200
+    hindi_data = hindi.json()
+    assert hindi_data["language"] == "hi"
+    assert hindi_data["mode"] == "local"
+    assert "सहायक" in hindi_data["reply"]
+    assert all(
+        any("\u0900" <= char <= "\u097f" for char in suggestion)
+        for suggestion in hindi_data["suggestions"]
+    )
+
+    bengali = ask(client, "নমস্কার", language="bn")
+    assert bengali.status_code == 200
+    bengali_data = bengali.json()
+    assert bengali_data["language"] == "bn"
+    assert "সহায়ক" in bengali_data["reply"]
+    assert all(
+        any("\u0980" <= char <= "\u09ff" for char in suggestion)
+        for suggestion in bengali_data["suggestions"]
+    )
+
+
+def test_assistant_localizes_live_low_stock_answers(client, create_product):
+    create_product(
+        name="Hindi Widget",
+        sku="HI-1",
+        stock_quantity=2,
+        reorder_level=5,
+    )
+
+    hindi = ask(
+        client,
+        "कम स्टॉक वाले उत्पाद दिखाएँ",
+        language="hi",
+    )
+    assert hindi.status_code == 200
+    hindi_reply = hindi.json()["reply"]
+    assert "Hindi Widget" in hindi_reply
+    assert "स्टॉक" in hindi_reply
+    assert "Demand Forecast" in hindi_reply
+
+    bengali = ask(
+        client,
+        "কম স্টকের পণ্য দেখান",
+        language="bn",
+    )
+    assert bengali.status_code == 200
+    bengali_reply = bengali.json()["reply"]
+    assert "Hindi Widget" in bengali_reply
+    assert "স্টক" in bengali_reply
+
+
+def test_assistant_localizes_help_and_scope_refusal(client):
+    hindi_help = ask(
+        client,
+        "उत्पाद कैसे जोड़ें?",
+        language="hi",
+    ).json()["reply"]
+    assert "उत्पाद" in hindi_help
+    assert "SKU" in hindi_help
+
+    bengali_help = ask(
+        client,
+        "কীভাবে একটি পণ্য যোগ করব?",
+        language="bn",
+    ).json()["reply"]
+    assert "পণ্য" in bengali_help
+    assert "SKU" in bengali_help
+
+    hindi_refusal = ask(
+        client,
+        "क्रिकेट कप किसने जीता?",
+        language="hi",
+    ).json()["reply"]
+    assert "केवल NextGenERP" in hindi_refusal
+
+    bengali_refusal = ask(
+        client,
+        "ক্রিকেট বিশ্বকাপ কে জিতেছে?",
+        language="bn",
+    ).json()["reply"]
+    assert "শুধু NextGenERP" in bengali_refusal
+
+
+def test_assistant_rejects_unsupported_language(client):
+    response = ask(client, "hello", language="fr")
+    assert response.status_code == 422
+
+
+def test_assistant_passes_language_instruction_to_llm(client, monkeypatch):
+    monkeypatch.setenv("ASSISTANT_LLM_API_KEY", "test-key-not-real")
+    captured = {}
+
+    class FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {
+                "choices": [
+                    {"message": {"content": "स्टॉक की जानकारी उपलब्ध है।"}}
+                ]
+            }
+
+    def fake_post(url, headers=None, json=None, timeout=None):
+        captured["payload"] = json
+        return FakeResponse()
+
+    monkeypatch.setattr("assistant.llm.requests.post", fake_post)
+
+    response = ask(
+        client,
+        "कम स्टॉक वाले उत्पाद दिखाएँ",
+        language="hi",
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["mode"] == "llm"
+    assert data["language"] == "hi"
+    assert data["reply"] == "स्टॉक की जानकारी उपलब्ध है।"
+
+    system_prompts = [
+        message["content"]
+        for message in captured["payload"]["messages"]
+        if message["role"] == "system"
+    ]
+    assert any(
+        "Hindi" in prompt and "Devanagari" in prompt
+        for prompt in system_prompts
+    )
+    assert any("NextGenERP" in prompt for prompt in system_prompts)
     assert "test-key-not-real" not in data["reply"]

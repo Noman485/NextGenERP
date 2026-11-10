@@ -24,7 +24,7 @@ In scope:
 - Dashboard aggregation and partial-failure behavior.
 - Demand forecast display, reorder suggestions and ERP overlay.
 - Project-scoped assistant: allowed topics, refusals, live data, limits,
-  fallbacks and UI.
+  fallbacks, English/Hindi/Bengali localization, voice input/output controls and UI.
 - Navigation, 404 handling, responsive layout and keyboard access.
 - API validation, authorization, CORS and secret handling.
 
@@ -67,6 +67,9 @@ Constraints:
 - Only headless Microsoft Edge is available; cross-browser coverage is blocked.
 - No external LLM provider key is configured; provider success/timeout/401/429
   paths are blocked and local fallback is tested.
+- Headless Edge exposes the Web Speech APIs but cannot grant a real microphone
+  permission or provide audio input; voice controls, language payloads and
+  spoken-reply state are tested, while real capture remains a manual check.
 
 ## 5. Test data
 
@@ -79,9 +82,12 @@ Backend tests create data per test through fixtures:
 
 Browser checks use the running development workspace:
 
-- Products include `amul butter` (stock 5), `cheese` (stock 200) and `chips`
-  (stock 500).
-- `amul butter` is the low-stock product used for live assistant answers.
+- Seeded modules contain at least 100 records each: 100 categories, 100
+  products, 100 suppliers, 100 sales orders and 100 purchase orders.
+- Low-stock checks use seeded `DEMO-` SKUs (for example `DEMO-0006`); the
+  assistant reply lists the current low-stock set rather than a fixed name.
+- The inventory history contains the seeded movements and must stay consistent
+  with product stock.
 - Checks must not leave the workspace in a broken state; read-only checks are
   preferred, and any created record must be accounted for.
 
@@ -112,9 +118,12 @@ Exit for a release:
 
 Current status (2026-11-11):
 
-- Backend: 43 passed, 1 third-party deprecation warning.
+- Backend: 48 passed, 1 third-party deprecation warning.
 - Build: passed, one chunk-size warning.
-- Catalog: 1000 total, 14 passed, 39 blocked, 947 not_run.
+- Catalog: 1000 total, 27 passed, 41 blocked, 932 not_run.
+- Assistant voice/language browser flow passed for the three language options,
+  mic control, auto-speak, localized Hindi/Bengali live answers, Bengali
+  refusal, speaker state and mobile layout; real microphone capture is blocked.
 - Release is **not** fully verified because most catalog scenarios are not yet
   executed and rate limiting is missing.
 
@@ -151,6 +160,7 @@ Browser checks (examples live outside the repo in the working environment):
 
 ```powershell
 node assistant-test.cjs
+node assistant-voice-test.cjs
 node stabilization-check.cjs
 ```
 
@@ -167,7 +177,7 @@ node stabilization-check.cjs
 | Sales Orders | 120 | Create, validation, deduction, transitions, cancellation, UI, security, concurrency |
 | Purchase Orders | 120 | Create, validation, transitions, receiving, cancellation, UI, security, concurrency |
 | Demand Forecast | 80 | Display, reorder logic, filters, refresh, model integrity, ERP overlay, accessibility |
-| NextGenERP Assistant | 80 | Allowed/refused scope, live data, help, LLM paths, UI, privacy |
+| NextGenERP Assistant | 80 | Allowed/refused scope, live data, help, localization, voice controls, LLM paths, UI, privacy |
 | Navigation and UI | 50 | Routes, shell, search, 404, accessibility, responsive |
 | Security and API | 50 | Auth requirements, injection, CORS, secrets, XSS, rate limiting |
 
@@ -180,6 +190,8 @@ node stabilization-check.cjs
 | Auth brute force | High | High | Rate limiting and lockout (open) |
 | Assistant leaks workspace data to a provider | Low | High | Opt-in provider, trimmed snapshot, strict prompt, documented privacy note |
 | Assistant answers outside scope | Medium | Medium | Pre-LLM scope refusal and tests |
+| Browser speech support varies | Medium | Low | Feature-detect, disable controls with an explanation, keep typing available |
+| Wrong-language or mixed-language reply | Low | Medium | Explicit language field, localized engine, language instruction to the LLM |
 | Partial dashboard hides failures | Low | Medium | Per-section unavailable states and banner |
 | Large lists degrade performance | Medium | Medium | Pagination/virtualization (open) |
 | Three.js chunk slows first load | High | Low | Lazy import already; further splitting recommended |
@@ -212,5 +224,7 @@ node stabilization-check.cjs
 | Sales concurrency | 8 | SQLite write serialization differs | Run against PostgreSQL |
 | Purchase concurrency | 12 | SQLite write serialization differs | Run against PostgreSQL |
 | External LLM provider | 5 | No provider key | Configure a test key or mock endpoint |
+| Voice microphone capture | 1 | Headless Edge cannot grant a real microphone permission or supply audio | Run a manual or device-farm check with a real microphone |
+| Cross-browser voice | 1 | Only Edge is installed | Add Firefox/WebKit runners or Playwright browsers |
 | Rate limiting | 6 | Control not implemented | Implement and test limits |
 | Cross-browser E2E | n/a | Only Edge installed | Add Playwright browsers or another runner |

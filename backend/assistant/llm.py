@@ -12,6 +12,7 @@ import os
 import requests
 
 from .knowledge import PROJECT_OVERVIEW
+from .localization import llm_language_instruction, normalize_language
 from .snapshot import snapshot_for_llm
 
 logger = logging.getLogger(__name__)
@@ -38,7 +39,8 @@ GROUNDING
 
 STYLE
 - Be concise and practical. Prefer short paragraphs and bullet points.
-- Use the same language as the user (English, Hindi or Hinglish).
+- Follow the LANGUAGE instruction for the reply language. Keep product names,
+  SKUs, order numbers and status values exactly as they appear in the data.
 - Explain page names and next steps when relevant.
 - Never reveal API keys, tokens, passwords, environment variables, internal
   file paths, model weights, SQL or implementation secrets.
@@ -51,7 +53,14 @@ def is_configured() -> bool:
     )
 
 
-def _build_messages(message, history, snapshot, knowledge_entry, doc_match):
+def _build_messages(
+    message,
+    history,
+    snapshot,
+    knowledge_entry,
+    doc_match,
+    language="en",
+):
     context = {
         "project_overview": PROJECT_OVERVIEW,
         "live_snapshot": snapshot_for_llm(snapshot),
@@ -72,6 +81,11 @@ def _build_messages(message, history, snapshot, knowledge_entry, doc_match):
         {"role": "system", "content": SYSTEM_PROMPT},
         {
             "role": "system",
+            "content": "LANGUAGE INSTRUCTION: "
+            + llm_language_instruction(normalize_language(language)),
+        },
+        {
+            "role": "system",
             "content": "PROJECT CONTEXT (JSON):\n" + json.dumps(context, ensure_ascii=False),
         },
     ]
@@ -86,7 +100,14 @@ def _build_messages(message, history, snapshot, knowledge_entry, doc_match):
     return messages
 
 
-def ask_llm(message, history, snapshot, knowledge_entry=None, doc_match=None):
+def ask_llm(
+    message,
+    history,
+    snapshot,
+    knowledge_entry=None,
+    doc_match=None,
+    language="en",
+):
     """Return a reply, or None when the provider is unavailable or misconfigured."""
     api_key = os.getenv("ASSISTANT_LLM_API_KEY") or os.getenv("OPENAI_API_KEY")
     if not api_key:
@@ -107,7 +128,12 @@ def ask_llm(message, history, snapshot, knowledge_entry=None, doc_match=None):
             json={
                 "model": model,
                 "messages": _build_messages(
-                    message, history, snapshot, knowledge_entry, doc_match
+                    message,
+                    history,
+                    snapshot,
+                    knowledge_entry,
+                    doc_match,
+                    language=language,
                 ),
                 "temperature": 0.2,
                 "max_tokens": 600,

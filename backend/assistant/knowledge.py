@@ -5,6 +5,8 @@ is intentionally limited to this product: inventory, catalog, suppliers, sales
 orders, purchase orders, forecasting and day-to-day usage.
 """
 
+from .localization import localized_keywords
+
 PROJECT_OVERVIEW = """
 NextGenERP is an inventory and procurement ERP. It includes:
 - Dashboard with stock health, low-stock alerts and recent activity.
@@ -16,46 +18,6 @@ NextGenERP is an inventory and procurement ERP. It includes:
   lead time, safety stock, recent sales and weather.
 - An optional 3D warehouse snapshot and 3D forecast chart.
 """.strip()
-
-PROJECT_INTRO = (
-    "I am the NextGenERP Assistant. I only help with this workspace: inventory, "
-    "products, categories, suppliers, sales orders, purchase orders, demand "
-    "forecasting and how to use the app. I can read the live workspace data to "
-    "answer questions, but I cannot change records for you."
-)
-
-SCOPE_REFUSAL = (
-    "I can only help with NextGenERP — inventory, products, categories, "
-    "suppliers, sales orders, purchase orders, demand forecasts and how to use "
-    "this workspace. I cannot help with general knowledge, news, coding or "
-    "other topics.\n\nTry asking:\n"
-    "- Show low-stock products\n"
-    "- What are the pending sales orders?\n"
-    "- How do I add a product?\n"
-    "- What should I reorder?"
-)
-
-DEFAULT_SUGGESTIONS = [
-    "Show low-stock products",
-    "What are the pending sales orders?",
-    "How do I add a product?",
-    "What should I reorder?",
-]
-
-DOMAIN_TERMS = {
-    "nextgenerp", "erp", "inventory", "stock", "product", "products", "catalog",
-    "sku", "category", "categories", "supplier", "suppliers", "vendor",
-    "purchase", "purchasing", "sales", "order", "orders", "reorder",
-    "forecast", "forecasting", "demand", "warehouse", "dashboard", "login",
-    "register", "password", "account", "report", "wape", "xgboost", "3d",
-    "shipment", "delivery", "received", "cancelled", "pending", "approved",
-    "confirmed", "shipped", "delivered", "low stock", "out of stock",
-}
-
-GREETING_TERMS = {
-    "hi", "hello", "hey", "namaste", "good morning", "good afternoon",
-    "good evening", "thanks", "thank you", "ok", "okay",
-}
 
 KNOWLEDGE = [
     {
@@ -338,7 +300,7 @@ def _normalize(value: str) -> str:
     return " ".join(str(value or "").lower().split())
 
 
-def find_knowledge(message: str):
+def find_knowledge(message: str, language: str = "en"):
     """Return the best matching help entry for a message, or None."""
     text = _normalize(message)
     best_entry = None
@@ -346,7 +308,8 @@ def find_knowledge(message: str):
 
     for entry in KNOWLEDGE:
         score = 0
-        for keyword in entry["keywords"]:
+        keywords = entry["keywords"] + localized_keywords(entry["id"], language)
+        for keyword in keywords:
             if keyword in text:
                 score += len(keyword.split()) * 2 + 1
         title_words = [word for word in _normalize(entry["title"]).split() if len(word) > 3]

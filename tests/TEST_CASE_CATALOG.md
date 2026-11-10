@@ -25,10 +25,10 @@ Status values:
 | Sales Orders | 120 | 0 | 112 | 8 |
 | Purchase Orders | 120 | 0 | 108 | 12 |
 | Demand Forecast | 80 | 0 | 80 | 0 |
-| NextGenERP Assistant | 80 | 8 | 67 | 5 |
+| NextGenERP Assistant | 80 | 21 | 52 | 7 |
 | Navigation and UI | 50 | 1 | 49 | 0 |
 | Security and API | 50 | 0 | 44 | 6 |
-| **Total** | **1000** | **14** | **947** | **39** |
+| **Total** | **1000** | **27** | **932** | **41** |
 
 ## Authentication
 
@@ -1239,112 +1239,122 @@ Status values:
 | TC-0823 | Allowed scope: answer allowed topic: pending purchase orders | API | P2 | not_run |
 | TC-0824 | Allowed scope: answer allowed topic: product stock | API | P2 | not_run |
 | TC-0825 | Allowed scope: answer allowed topic: supplier details | API | P2 | not_run |
-| TC-0826 | Allowed scope: answer allowed topic: catalog counts | API | P2 | not_run |
-| TC-0827 | Allowed scope: answer allowed topic: reorder needs | API | P2 | not_run |
-| TC-0828 | Allowed scope: answer allowed topic: navigation help | API | P2 | not_run |
-| TC-0829 | Allowed scope: answer allowed topic: add product help | API | P2 | not_run |
-| TC-0830 | Allowed scope: answer allowed topic: forecast help | API | P2 | not_run |
-| TC-0831 | Allowed scope: answer allowed topic: login help | API | P2 | not_run |
-| TC-0832 | Allowed scope: answer allowed topic: dashboard help | API | P2 | not_run |
+| TC-0826 | Allowed scope: answer allowed topic: reorder needs | API | P2 | not_run |
+| TC-0827 | Allowed scope: answer allowed topic: navigation help | API | P2 | not_run |
+| TC-0828 | Allowed scope: answer allowed topic: add product help | API | P2 | not_run |
+| TC-0829 | Allowed scope: answer allowed topic: forecast help | API | P2 | not_run |
+| TC-0830 | Allowed scope: answer allowed topic: login help | API | P2 | not_run |
 
 ### Refused scope
 
 | ID | Scenario | Type | Priority | Status |
 | --- | --- | --- | --- | --- |
-| TC-0833 | Refused scope: refuse off-topic topic: cricket result | API | P2 | not_run |
-| TC-0834 | Refused scope: refuse off-topic topic: weather forecast | API | P2 | not_run |
-| TC-0835 | Refused scope: refuse off-topic topic: world news | API | P2 | not_run |
-| TC-0836 | Refused scope: refuse off-topic topic: coding question | API | P2 | not_run |
-| TC-0837 | Refused scope: refuse off-topic topic: medical question | API | P2 | not_run |
-| TC-0838 | Refused scope: refuse off-topic topic: legal question | API | P2 | not_run |
-| TC-0839 | Refused scope: refuse off-topic topic: personal advice | API | P2 | not_run |
-| TC-0840 | Refused scope: refuse off-topic topic: math problem | API | P2 | not_run |
-| TC-0841 | Refused scope: refuse off-topic topic: translation request | API | P2 | not_run |
-| TC-0842 | Refused scope: refuse off-topic topic: politics | API | P2 | not_run |
-| TC-0843 | Refused scope: refuse off-topic topic: general knowledge | API | P2 | not_run |
-| TC-0844 | Refused scope: refuse off-topic topic: prompt injection | API | P2 | not_run |
+| TC-0831 | Refused scope: refuse off-topic topic: cricket result | API | P2 | not_run |
+| TC-0832 | Refused scope: refuse off-topic topic: weather forecast | API | P2 | not_run |
+| TC-0833 | Refused scope: refuse off-topic topic: world news | API | P2 | not_run |
+| TC-0834 | Refused scope: refuse off-topic topic: coding question | API | P2 | not_run |
+| TC-0835 | Refused scope: refuse off-topic topic: medical question | API | P2 | not_run |
+| TC-0836 | Refused scope: refuse off-topic topic: legal question | API | P2 | not_run |
+| TC-0837 | Refused scope: refuse off-topic topic: personal advice | API | P2 | not_run |
+| TC-0838 | Refused scope: refuse off-topic topic: math problem | API | P2 | not_run |
+| TC-0839 | Refused scope: refuse off-topic topic: general knowledge | API | P2 | not_run |
+| TC-0840 | Refused scope: refuse off-topic topic: prompt injection | API | P2 | not_run |
 
 ### Live data answers
 
 | ID | Scenario | Type | Priority | Status |
 | --- | --- | --- | --- | --- |
-| TC-0845 | Live data answers: live-data answer: low-stock boundary | API | P2 | not_run |
-| TC-0846 | Live data answers: live-data answer: out-of-stock list | API | P2 | not_run |
-| TC-0847 | Live data answers: live-data answer: no low-stock items | API | P2 | not_run |
-| TC-0848 | Live data answers: live-data answer: product by name | API | P2 | not_run |
-| TC-0849 | Live data answers: live-data answer: product by SKU | API | P2 | not_run |
-| TC-0850 | Live data answers: live-data answer: supplier details | API | P2 | not_run |
-| TC-0851 | Live data answers: live-data answer: sales order lookup | API | P2 | not_run |
-| TC-0852 | Live data answers: live-data answer: purchase order lookup | API | P2 | not_run |
-| TC-0853 | Live data answers: live-data answer: catalog counts | API | P2 | not_run |
-| TC-0854 | Live data answers: live-data answer: empty database | API | P2 | not_run |
-| TC-0855 | Live data answers: live-data answer: many products | API | P2 | not_run |
-| TC-0856 | Live data answers: live-data answer: unicode product name | API | P2 | not_run |
-| TC-0857 | Live data answers: live-data answer: case-insensitive product name | API | P2 | not_run |
-| TC-0858 | Live data answers: live-data answer: missing product | API | P2 | not_run |
-| TC-0859 | Live data answers: live-data answer: deleted product | API | P2 | not_run |
+| TC-0841 | Live data answers: live-data answer: low-stock boundary | API | P2 | not_run |
+| TC-0842 | Live data answers: live-data answer: out-of-stock list | API | P2 | not_run |
+| TC-0843 | Live data answers: live-data answer: no low-stock items | API | P2 | not_run |
+| TC-0844 | Live data answers: live-data answer: product by name | API | P2 | not_run |
+| TC-0845 | Live data answers: live-data answer: product by SKU | API | P2 | not_run |
+| TC-0846 | Live data answers: live-data answer: supplier details | API | P2 | not_run |
+| TC-0847 | Live data answers: live-data answer: sales order lookup | API | P2 | not_run |
+| TC-0848 | Live data answers: live-data answer: purchase order lookup | API | P2 | not_run |
+| TC-0849 | Live data answers: live-data answer: catalog counts | API | P2 | not_run |
+| TC-0850 | Live data answers: live-data answer: empty database | API | P2 | not_run |
+| TC-0851 | Live data answers: live-data answer: many products | API | P2 | not_run |
+| TC-0852 | Live data answers: live-data answer: unicode product name | API | P2 | not_run |
 
 ### Help topics
 
 | ID | Scenario | Type | Priority | Status |
 | --- | --- | --- | --- | --- |
-| TC-0860 | Help topics: help topic: add product | API | P2 | not_run |
-| TC-0861 | Help topics: help topic: edit or delete product | API | P2 | not_run |
-| TC-0862 | Help topics: help topic: record stock movement | API | P2 | not_run |
-| TC-0863 | Help topics: help topic: create sales order | API | P2 | not_run |
-| TC-0864 | Help topics: help topic: create purchase order | API | P2 | not_run |
-| TC-0865 | Help topics: help topic: read demand forecast | API | P2 | not_run |
-| TC-0866 | Help topics: help topic: sign in | API | P2 | not_run |
-| TC-0867 | Help topics: help topic: roles and permissions | API | P2 | not_run |
-| TC-0868 | Help topics: help topic: delete rules | API | P2 | not_run |
-| TC-0869 | Help topics: help topic: common errors | API | P2 | not_run |
+| TC-0853 | Help topics: help topic: add product | API | P2 | not_run |
+| TC-0854 | Help topics: help topic: edit or delete product | API | P2 | not_run |
+| TC-0855 | Help topics: help topic: record stock movement | API | P2 | not_run |
+| TC-0856 | Help topics: help topic: create sales order | API | P2 | not_run |
+| TC-0857 | Help topics: help topic: create purchase order | API | P2 | not_run |
+| TC-0858 | Help topics: help topic: read demand forecast | API | P2 | not_run |
+| TC-0859 | Help topics: help topic: delete rules | API | P2 | not_run |
+| TC-0860 | Help topics: help topic: common errors | API | P2 | not_run |
 
 ### LLM external provider
 
 | ID | Scenario | Type | Priority | Status |
 | --- | --- | --- | --- | --- |
-| TC-0870 | LLM external provider: external provider: provider success | API | P2 | blocked |
-| TC-0871 | LLM external provider: external provider: provider timeout | API | P2 | blocked |
-| TC-0872 | LLM external provider: external provider: provider 401 | API | P2 | blocked |
-| TC-0873 | LLM external provider: external provider: provider 429 | API | P2 | blocked |
-| TC-0874 | LLM external provider: external provider: custom base URL | API | P2 | blocked |
+| TC-0861 | LLM external provider: external provider: provider success | API | P2 | blocked |
+| TC-0862 | LLM external provider: external provider: provider timeout | API | P2 | blocked |
+| TC-0863 | LLM external provider: external provider: provider 401 | API | P2 | blocked |
+| TC-0864 | LLM external provider: external provider: provider 429 | API | P2 | blocked |
+| TC-0865 | LLM external provider: external provider: custom base URL | API | P2 | blocked |
 
 ### LLM local fallback
 
 | ID | Scenario | Type | Priority | Status |
 | --- | --- | --- | --- | --- |
-| TC-0875 | LLM local fallback: local LLM behavior: no key configured | API | P2 | not_run |
-| TC-0876 | LLM local fallback: local LLM behavior: provider request failure | API | P2 | not_run |
-| TC-0877 | LLM local fallback: local LLM behavior: invalid provider JSON | API | P2 | not_run |
-| TC-0878 | LLM local fallback: local LLM behavior: key never returned in response | API | P2 | not_run |
-| TC-0879 | LLM local fallback: local LLM behavior: strict scope prompt sent | API | P2 | not_run |
+| TC-0866 | LLM local fallback: local LLM behavior: no key configured | API | P2 | not_run |
+| TC-0867 | LLM local fallback: local LLM behavior: provider request failure | API | P2 | not_run |
+| TC-0868 | LLM local fallback: local LLM behavior: key never returned in response | API | P2 | not_run |
+| TC-0869 | LLM local fallback: local LLM behavior: strict scope prompt sent | API | P2 | not_run |
 
 ### UI
 
 | ID | Scenario | Type | Priority | Status |
 | --- | --- | --- | --- | --- |
-| TC-0880 | UI: launcher is visible | UI | P2 | passed |
-| TC-0881 | UI: panel opens | UI | P2 | passed |
-| TC-0882 | UI: panel closes | UI | P2 | passed |
-| TC-0883 | UI: low-stock suggestion returns live answer | UI | P2 | passed |
-| TC-0884 | UI: help suggestion returns steps | UI | P2 | passed |
-| TC-0885 | UI: off-topic question is refused | UI | P2 | passed |
-| TC-0886 | UI: mobile panel fits viewport | UI | P2 | passed |
-| TC-0887 | UI: Escape closes panel | UI | P2 | passed |
-| TC-0888 | UI: clear conversation | UI | P2 | not_run |
-| TC-0889 | UI: suggestion chips | UI | P2 | not_run |
-| TC-0890 | UI: retry after error | UI | P2 | not_run |
-| TC-0891 | UI: focus and scroll behavior | UI | P2 | not_run |
+| TC-0870 | UI: launcher is visible | UI | P2 | passed |
+| TC-0871 | UI: panel opens | UI | P2 | passed |
+| TC-0872 | UI: panel closes | UI | P2 | passed |
+| TC-0873 | UI: low-stock suggestion returns live answer | UI | P2 | passed |
+| TC-0874 | UI: help suggestion returns steps | UI | P2 | passed |
+| TC-0875 | UI: off-topic question is refused | UI | P2 | passed |
+| TC-0876 | UI: mobile panel fits viewport | UI | P2 | passed |
+| TC-0877 | UI: Escape closes panel | UI | P2 | passed |
+
+### Localization
+
+| ID | Scenario | Type | Priority | Status |
+| --- | --- | --- | --- | --- |
+| TC-0878 | Localization: Hindi greeting returns a localized intro and suggestions | API | P2 | passed |
+| TC-0879 | Localization: Bengali greeting returns a localized intro and suggestions | API | P2 | passed |
+| TC-0880 | Localization: Devanagari combining-mark greeting is recognized | API | P2 | passed |
+| TC-0881 | Localization: Hindi live low-stock answer is localized | API | P2 | passed |
+| TC-0882 | Localization: Bengali live low-stock answer is localized | API | P2 | passed |
+| TC-0883 | Localization: localized help topic answer | API | P2 | passed |
+| TC-0884 | Localization: localized scope refusal in Hindi and Bengali | API | P2 | passed |
+| TC-0885 | Localization: unsupported language code is rejected | API | P2 | passed |
+| TC-0886 | Localization: LLM receives an explicit language instruction | API | P2 | passed |
+
+### Voice UI
+
+| ID | Scenario | Type | Priority | Status |
+| --- | --- | --- | --- | --- |
+| TC-0887 | Voice UI: language selector lists English, Hindi and Bengali | UI | P2 | passed |
+| TC-0888 | Voice UI: language switch updates welcome and suggestions | UI | P2 | passed |
+| TC-0889 | Voice UI: microphone control is enabled when supported | UI | P2 | passed |
+| TC-0890 | Voice UI: speaker play/stop and auto-speak toggle | UI | P2 | passed |
+| TC-0891 | Voice UI: actual microphone capture and permission grant | UI | P2 | blocked |
+| TC-0892 | Voice UI: cross-browser voice support | UI | P2 | blocked |
 
 ### Security and privacy
 
 | ID | Scenario | Type | Priority | Status |
 | --- | --- | --- | --- | --- |
-| TC-0892 | Security and privacy: assistant security: authentication required | API | P2 | not_run |
-| TC-0893 | Security and privacy: assistant security: blank message rejected | API | P2 | not_run |
-| TC-0894 | Security and privacy: assistant security: oversized message rejected | API | P2 | not_run |
-| TC-0895 | Security and privacy: assistant security: over-long history rejected | API | P2 | not_run |
-| TC-0896 | Security and privacy: assistant security: invalid role rejected | API | P2 | not_run |
+| TC-0893 | Security and privacy: assistant security: authentication required | API | P2 | not_run |
+| TC-0894 | Security and privacy: assistant security: blank message rejected | API | P2 | not_run |
+| TC-0895 | Security and privacy: assistant security: oversized message rejected | API | P2 | not_run |
+| TC-0896 | Security and privacy: assistant security: over-long history rejected | API | P2 | not_run |
 | TC-0897 | Security and privacy: assistant security: no secrets in response | API | P2 | not_run |
 | TC-0898 | Security and privacy: assistant security: off-topic refusal before provider call | API | P2 | not_run |
 | TC-0899 | Security and privacy: assistant security: read-only claims | API | P2 | not_run |

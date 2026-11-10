@@ -27,4 +27,5 @@ def chat(
         payload.message,
         db,
         history=[item.model_dump() for item in payload.history],
+        language=payload.language,
     )

@@ -12,7 +12,7 @@ NextGenERP is an inventory and procurement ERP application for managing product 
 - **Inventory operations:** record stock-in and stock-out transactions with a reason and view transaction history. Stock-out operations reject quantities greater than available inventory.
 - **API health:** the `/health` endpoint checks database connectivity.
 - **Demand forecasting (ML):** an integrated XGBoost model trained on the Kaggle Store Item Demand dataset produces a 7-day demand forecast and smart reorder recommendations (held-out test WAPE **8.42%**, R² **0.744**). Results are available on the **Forecasting** page and through `GET /ml/insights`. See the [ML integration guide](./docs/ml-integration.md).
-- **In-app assistant:** a read-only assistant that is scoped to NextGenERP and available on every authenticated page. It answers questions about inventory, orders, suppliers, forecasting, navigation and troubleshooting using live workspace data. The built-in engine needs no API key; an OpenAI-compatible provider can be enabled optionally. It cannot create, edit, cancel or delete records. See the [assistant guide](./docs/ai-assistant.md).
+- **In-app assistant:** a read-only assistant that is scoped to NextGenERP and available on every authenticated page. It answers questions about inventory, orders, suppliers, forecasting, navigation and troubleshooting using live workspace data. It supports English, Hindi and Bengali, with optional browser voice input and spoken replies. The built-in engine needs no API key; an OpenAI-compatible provider can be enabled optionally. It cannot create, edit, cancel or delete records. See the [assistant guide](./docs/ai-assistant.md).
 
 ### Not included / pending
 
@@ -73,6 +73,17 @@ npm run dev
 
 Open <http://localhost:5173>. `API_PROXY_TARGET` configures the local Vite proxy. `VITE_API_BASE_URL` is optional and defaults to an empty string (same-origin paths); set it only when the browser should call a separately hosted API directly.
 
+### Demo data
+
+To populate every business module with at least 100 records, run the idempotent seed script against the configured database:
+
+```powershell
+Set-Location backend
+.\venv\Scripts\python.exe seed_demo_data.py
+```
+
+The script preserves existing records, tops up only the modules that are short, and records stock movements through the same inventory service used by the API. It creates `DEMO-` SKUs, 100 categories, 100 products, 100 suppliers, 100 sales orders, 100 purchase orders and enough inventory history to reach 100 rows. Rerunning it does not duplicate the previous seed.
+
 ## Environment configuration
 
 | Variable | Used by | Purpose |
@@ -121,6 +132,7 @@ When running the backend directly for local development, interactive OpenAPI doc
 | `/purchase-orders/`, `/purchase-orders/{purchase_order_id}`, `/purchase-orders/{purchase_order_id}/status` | Purchase order operations and status transitions |
 | `/inventory-transactions/` | Create and list inventory transactions |
 | `/ml/insights` | 7-day demand forecast and smart reorder recommendations |
+| `/assistant/chat` | Project-scoped assistant reply with `language` (`en`, `hi`, `bn`) |
 | `/health` | Database-backed readiness check |
 
 Business-resource routes require `Authorization: Bearer <token>`. Registration accepts a username of 3–80 letters/digits/periods/underscores/hyphens and a password of 12–128 characters. There is no default account; register an account through the UI or API.
@@ -164,3 +176,5 @@ For production configuration, secrets, database access, CORS, and HTTPS requirem
 - [ ] Create a purchase order, progress it through receipt, and confirm stock is added once.
 - [ ] Record stock-in and stock-out operations, then inspect inventory transaction history.
 - [ ] Open the Forecasting page and confirm the 7-day demand forecast and reorder recommendations load successfully.
+- [ ] Open the assistant, switch between English, हिन्दी and বাংলা, and confirm the welcome, suggestions and a live low-stock answer follow the selected language.
+- [ ] In a supported browser, grant microphone access, ask a question by voice, and use the speaker button or auto-speak toggle to hear the answer.

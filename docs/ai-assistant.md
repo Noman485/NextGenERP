@@ -15,6 +15,10 @@ edit, cancel, receive or delete records.
 - Demand forecasting and suggested reorders (explanation only; the model is unchanged).
 - Navigation, accounts, common errors and troubleshooting.
 
+The panel and answers are available in **English**, **Hindi** and **Bengali**,
+including voice input and spoken replies in browsers that support the Web Speech
+API.
+
 Anything outside NextGenERP is refused before any model call is made.
 
 ## How it works
@@ -31,20 +35,47 @@ Answer engine (assistant/engine.py)
   |-- project scope check
   |-- live snapshot (assistant/snapshot.py)
   |-- curated help topics (assistant/knowledge.py)
+  |-- localization (assistant/localization.py)
   |-- documentation retrieval (assistant/docs.py)
   |-- optional LLM bridge (assistant/llm.py)
 ```
 
 1. The message is normalized and checked against the NextGenERP domain.
 2. The engine builds a read-only snapshot of the current workspace.
-3. It looks for a matching help topic and relevant project documentation.
-4. If no LLM is configured, a deterministic local answer is returned.
-5. If an LLM is configured, the engine sends the scope rules, the snapshot and
-   the retrieved context to an OpenAI-compatible endpoint. If that call fails,
-   the local answer is used instead.
+3. It looks for a matching help topic and relevant project documentation in the
+   selected language.
+4. If no LLM is configured, a deterministic localized answer is returned.
+5. If an LLM is configured, the engine sends the scope rules, the language
+   instruction, the snapshot and the retrieved context to an
+   OpenAI-compatible endpoint. If that call fails, the local answer is used
+   instead.
 
 The local mode needs no API key, no network access and no additional Python
 packages beyond the existing `requests` dependency.
+
+## Languages and voice
+
+| Language | Code | Speech locale | Coverage |
+| --- | --- | --- | --- |
+| English | `en` | `en-IN` | Panel copy, suggestions, help topics, live answers, refusals |
+| Hindi | `hi` | `hi-IN` | Same, with Devanagari script |
+| Bengali | `bn` | `bn-IN` | Same, with Bengali script |
+
+- Language-specific copy, keywords, status labels and reply templates live in
+  `backend/assistant/localization.py`. Product names, SKUs, order numbers and
+  stored status values are not translated.
+- The selected language is sent with every request. Changing the language
+  clears the current conversation so answers do not mix scripts or context.
+- Voice input uses the browser-native `SpeechRecognition` /
+  `webkitSpeechRecognition` API. The recognized transcript is submitted
+  automatically as the user's message.
+- Spoken replies use `speechSynthesis`. Auto-speak is **off by default**; each
+  assistant message also has its own play/stop button.
+- No audio is stored or sent to NextGenERP. Browser speech recognition may use
+  the browser vendor's speech service, so availability and privacy behavior
+  depend on the browser.
+- Voice controls are disabled with an explanatory tooltip when the browser does
+  not support the API. Typing always remains available.
 
 ## Configuration
 
@@ -83,25 +114,30 @@ Request:
   "history": [
     { "role": "user", "content": "hello" },
     { "role": "assistant", "content": "Hi!" }
-  ]
+  ],
+  "language": "en"
 }
 ```
 
 - `message` is required, trimmed, 1-1000 characters.
 - `history` is optional, at most 10 turns, each content 1-2000 characters.
 - Roles are limited to `user` and `assistant`.
+- `language` is optional and defaults to `en`; allowed values are `en`, `hi`
+  and `bn`. Any other value is rejected with HTTP 422.
 
 Response:
 
 ```json
 {
-  "reply": "Products at or below their reorder level:\n- amul butter (5): 5 units left, reorder level 5",
+  "reply": "Products at or below their reorder level:\n- Butter - Classic (DEMO-0006): 3 units left, reorder level 5",
   "suggestions": ["Show low-stock products", "..."],
-  "mode": "local"
+  "mode": "local",
+  "language": "en"
 }
 ```
 
 `mode` is `local` for the built-in engine and `llm` when a provider answered.
+`language` echoes the language used for the reply.
 
 ## Privacy and safety
 
@@ -117,14 +153,23 @@ Response:
 
 ## UI behavior
 
-- Floating **Ask assistant** launcher in the authenticated app shell.
+- Floating **Ask assistant** launcher in the authenticated app shell; the
+  launcher text follows the selected language.
 - Panel closes with Escape, the close button, or by navigating (the launcher
   remains available on every page).
-- Suggestion chips provide project-specific starting points.
-- Errors show a retry action without losing the conversation.
+- Language selector (English / हिन्दी / বাংলা) in the panel header area.
+- Microphone button for voice input; the input placeholder shows a listening
+  state while recognition is active.
+- Auto-speak toggle and a per-message speaker button. Playback stops on close,
+  language change, clear, Escape, or when another message starts playing.
+- Suggestion chips provide project-specific starting points in the selected
+  language.
+- Errors show a retry action without losing the conversation; microphone
+  permission and recognition errors are reported separately from API errors.
 - Mobile layout uses a full-width panel above the bottom edge; desktop uses a
   fixed 24rem panel.
-- The message log uses `role="log"` and `aria-live="polite"`.
+- The message log uses `role="log"`, `aria-live="polite"` and scrolls to the
+  latest message.
 
 ## Testing
 
@@ -139,7 +184,7 @@ Covered behavior:
 
 - Authentication is required.
 - Blank, oversized and over-long history payloads are rejected.
-- Greeting stays project-scoped.
+- Greeting stays project-scoped, including Devanagari and Bengali greetings.
 - Off-topic questions are refused.
 - Low-stock answers use live data.
 - Product stock lookup uses live data.
@@ -148,10 +193,25 @@ Covered behavior:
 - Catalog counts come from the database.
 - A failing LLM provider falls back to local mode.
 - A configured LLM receives the strict scope prompt and the key is not leaked.
+- Hindi and Bengali greetings return localized intros and suggestions.
+- Localized low-stock answers use live data and localized status text.
+- Localized help topics and scope refusals work without a provider.
+- Unsupported language codes return HTTP 422.
+- A configured LLM receives an explicit Hindi/Devanagari language instruction.
 
-The browser flow was verified with a Puppeteer smoke test: login, open panel,
-low-stock answer, help answer, off-topic refusal, close, 404 route, mobile
-layout, mobile chat and Escape close. The test finished with no console errors.
+The browser flow was verified with Puppeteer scripts on desktop and mobile:
+
+- Existing assistant regression: login, open panel, live low-stock answer, help
+  answer, off-topic refusal, close, 404 route, mobile layout, mobile chat and
+  Escape close.
+- Voice/language flow: three language options, mic button enabled in Edge,
+  auto-speak toggle, Hindi and Bengali welcome/suggestions, localized live
+  low-stock answers, Bengali scope refusal, localized launcher after close,
+  speaker play/stop state, 366 × 544 px mobile panel, zero horizontal overflow
+  and no console errors.
+
+Real microphone capture and permission prompts cannot be automated in headless
+Edge; they remain a manual check.
 
 ## Limitations
 
@@ -162,6 +222,13 @@ layout, mobile chat and Escape close. The test finished with no console errors.
 - Documentation retrieval is keyword-based and intentionally small.
 - The assistant does not stream responses.
 - The assistant does not know about data changed after the snapshot is built.
+- Voice input and spoken replies depend on browser support. In the test
+  environment (headless Edge) the APIs exist, but actual microphone permission
+  and audio capture were not automated.
+- Recognition accuracy depends on the browser, microphone and selected locale;
+  the transcript is sent as-is and can be edited before sending by typing.
+- Only `en`, `hi` and `bn` are supported. Mixed-language requests still work in
+  local mode for domain terms, but the reply uses the selected language.
 
 ## Troubleshooting
 
@@ -172,6 +239,14 @@ layout, mobile chat and Escape close. The test finished with no console errors.
 - **HTTP 401** — the session expired; sign in again.
 - **Always local mode** — no provider key is configured, or the provider call
   failed. Check the backend log for the fallback warning.
+- **Mic button disabled** — the browser does not expose the Web Speech
+  recognition API. Use the text input or a supported browser.
+- **"Microphone permission was denied"** — allow microphone access for the site
+  in the browser's site settings, then try again.
+- **No spoken audio** — the browser may lack a voice for the selected locale.
+  Install a system/browser voice for Hindi or Bengali, or use the text answer.
+- **Old English replies after switching language** — the backend is running old
+  code or the panel was not reloaded. Restart the backend and refresh the page.
 - **Vite serves an old UI** — the project lives in a OneDrive folder, so
   `vite.config.js` enables polling. If a change still does not appear, restart
   the dev server.

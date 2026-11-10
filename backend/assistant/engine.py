@@ -3,15 +3,25 @@
 import re
 
 from .docs import search_docs
-from .knowledge import (
-    DEFAULT_SUGGESTIONS,
-    DOMAIN_TERMS,
-    GREETING_TERMS,
-    PROJECT_INTRO,
-    SCOPE_REFUSAL,
-    find_knowledge,
-)
+from .knowledge import find_knowledge
 from .llm import ask_llm, is_configured
+from .localization import (
+    domain_terms,
+    entity_terms,
+    fallback_text,
+    greeting_first_words,
+    greeting_terms,
+    intro_text,
+    knowledge_answer,
+    normalize_language,
+    product_status_label,
+    purchase_terms,
+    refusal_text,
+    status_label,
+    suggestions_for,
+    terms_for,
+    text,
+)
 from .snapshot import build_snapshot
 
 MAX_LIST_ITEMS = 10
@@ -21,57 +31,64 @@ def _normalize(value: str) -> str:
     return " ".join(str(value or "").lower().split())
 
 
-def _contains_any(text: str, phrases) -> bool:
-    return any(phrase in text for phrase in phrases)
+def _contains_any(value: str, phrases) -> bool:
+    return any(phrase in value for phrase in phrases)
 
 
 def _money(value) -> str:
     return f"₹{float(value or 0):,.2f}"
 
 
-def _result(reply: str, mode: str = "local") -> dict:
+def _result(reply: str, language: str = "en", mode: str = "local") -> dict:
     return {
         "reply": reply,
-        "suggestions": DEFAULT_SUGGESTIONS,
+        "suggestions": suggestions_for(language),
         "mode": mode,
+        "language": normalize_language(language),
     }
 
 
-def _is_greeting(text: str) -> bool:
-    cleaned = re.sub(r"[^a-z\s]", " ", text).strip()
+def _is_greeting(value: str, language: str) -> bool:
+    # Keep Devanagari and Bengali combining marks, which ``\w`` alone drops.
+    cleaned = re.sub(
+        r"[^\w\s\u0900-\u097f\u0980-\u09ff]",
+        " ",
+        value,
+        flags=re.UNICODE,
+    ).strip()
     words = cleaned.split()
     if not words:
         return False
-    if " ".join(words) in GREETING_TERMS:
+    if " ".join(words) in greeting_terms(language):
         return True
-    return words[0] in {"hi", "hello", "hey", "namaste"} and len(words) <= 3
+    return words[0] in greeting_first_words(language) and len(words) <= 3
 
 
-def _find_product(text: str, products):
+def _find_product(value: str, products):
     matches = []
     for product in products:
         for key in (product.get("name"), product.get("sku")):
             key_text = str(key or "").strip().lower()
-            if len(key_text) >= 3 and key_text in text:
+            if len(key_text) >= 3 and key_text in value:
                 matches.append((len(key_text), product))
     return max(matches, key=lambda item: item[0])[1] if matches else None
 
 
-def _find_supplier(text: str, suppliers):
+def _find_supplier(value: str, suppliers):
     matches = []
     for supplier in suppliers:
         key_text = str(supplier.get("name") or "").strip().lower()
-        if len(key_text) >= 3 and key_text in text:
+        if len(key_text) >= 3 and key_text in value:
             matches.append((len(key_text), supplier))
     return max(matches, key=lambda item: item[0])[1] if matches else None
 
 
-def _is_project_related(text: str, snapshot: dict) -> bool:
-    if any(term in text for term in DOMAIN_TERMS):
+def _is_project_related(value: str, snapshot: dict, language: str) -> bool:
+    if any(term in value for term in domain_terms(language)):
         return True
-    if _find_product(text, snapshot["products"]):
+    if _find_product(value, snapshot["products"]):
         return True
-    if _find_supplier(text, snapshot["suppliers"]):
+    if _find_supplier(value, snapshot["suppliers"]):
         return True
     return False
 
@@ -86,84 +103,107 @@ def _product_status(product: dict) -> str:
     return "in stock"
 
 
-def _product_answer(product: dict) -> str:
-    return (
-        f"{product['name']} ({product['sku']})\n"
-        f"- Stock: {product['stock']} units\n"
-        f"- Reorder level: {product['reorder_level']}\n"
-        f"- Price: {_money(product['price'])}\n"
-        f"- Status: {_product_status(product)}\n\n"
-        "Open Products to edit it, or Inventory Operations to record a stock "
-        "movement."
+def _product_answer(product: dict, language: str) -> str:
+    return text(
+        language,
+        "product_detail",
+        name=product["name"],
+        sku=product["sku"],
+        stock=product["stock"],
+        reorder_level=product["reorder_level"],
+        price=_money(product["price"]),
+        status=product_status_label(_product_status(product), language),
     )
 
 
-def _supplier_answer(supplier: dict) -> str:
+def _supplier_answer(supplier: dict, language: str) -> str:
     rating = supplier.get("performance_rating")
-    rating_text = f"{rating:.1f} / 5" if rating is not None else "not rated"
+    rating_text = (
+        f"{rating:.1f} / 5"
+        if rating is not None
+        else text(language, "not_rated")
+    )
     contact = ", ".join(
         value for value in (supplier.get("email"), supplier.get("phone")) if value
     )
     lines = [
-        f"{supplier['name']}",
-        f"- Lead time: {supplier['lead_time_days']} days",
-        f"- Performance rating: {rating_text}",
+        text(
+            language,
+            "supplier_detail_head",
+            name=supplier["name"],
+            lead_time=supplier["lead_time_days"],
+            rating=rating_text,
+        )
     ]
     if contact:
-        lines.append(f"- Contact: {contact}")
-    lines.append(
-        "\nOpen Suppliers to view or update the supplier. Lead time is used in "
-        "reorder planning."
-    )
+        lines.append(text(language, "supplier_contact", contact=contact))
+    lines.append("\n" + text(language, "supplier_hint"))
     return "\n".join(lines)
 
 
-def _low_stock_answer(snapshot: dict) -> str:
+def _low_stock_answer(snapshot: dict, language: str) -> str:
     low_stock = snapshot["low_stock"]
     out_of_stock = snapshot["out_of_stock"]
 
     if low_stock:
         lines = [
-            f"- {product['name']} ({product['sku']}): {product['stock']} units "
-            f"left, reorder level {product['reorder_level']}"
+            text(
+                language,
+                "low_stock_line",
+                name=product["name"],
+                sku=product["sku"],
+                stock=product["stock"],
+                reorder_level=product["reorder_level"],
+            )
             for product in low_stock[:MAX_LIST_ITEMS]
         ]
-        reply = "Products at or below their reorder level:\n" + "\n".join(lines)
+        reply = text(language, "low_stock_header") + "\n" + "\n".join(lines)
         if len(low_stock) > MAX_LIST_ITEMS:
-            reply += f"\n...and {len(low_stock) - MAX_LIST_ITEMS} more."
+            reply += "\n" + text(
+                language, "more_line", count=len(low_stock) - MAX_LIST_ITEMS
+            )
     else:
-        reply = "No products are at or below their reorder level right now."
+        reply = text(language, "low_stock_none")
 
     if out_of_stock:
-        names = ", ".join(product["name"] for product in out_of_stock[:6])
-        reply += (
-            f"\n\nAlso out of stock ({len(out_of_stock)}): {names}"
-            + ("..." if len(out_of_stock) > 6 else ".")
+        names = ", ".join(
+            product["name"] for product in out_of_stock[:6]
+        ) + ("..." if len(out_of_stock) > 6 else ".")
+        reply += "\n\n" + text(
+            language,
+            "out_of_stock_extra",
+            count=len(out_of_stock),
+            names=names,
         )
 
-    reply += (
-        "\n\nOpen Demand Forecast for suggested reorder quantities based on "
-        "demand, lead time and safety stock."
-    )
+    reply += "\n\n" + text(language, "forecast_hint")
     return reply
 
 
-def _out_of_stock_answer(snapshot: dict) -> str:
+def _out_of_stock_answer(snapshot: dict, language: str) -> str:
     products = snapshot["out_of_stock"]
     if not products:
-        return "No products are out of stock right now."
+        return text(language, "out_of_stock_none")
     lines = [
-        f"- {product['name']} ({product['sku']}): reorder level "
-        f"{product['reorder_level']}"
+        text(
+            language,
+            "out_of_stock_line",
+            name=product["name"],
+            sku=product["sku"],
+            reorder_level=product["reorder_level"],
+        )
         for product in products[:MAX_LIST_ITEMS]
     ]
-    reply = f"{len(products)} product(s) are out of stock:\n" + "\n".join(lines)
+    reply = text(language, "out_of_stock_header", count=len(products))
+    reply += "\n" + "\n".join(lines)
     if len(products) > MAX_LIST_ITEMS:
-        reply += f"\n...and {len(products) - MAX_LIST_ITEMS} more."
-    return reply + "\n\nUse Inventory Operations for a stock-in movement or create a purchase order."
+        reply += "\n" + text(
+            language, "more_line", count=len(products) - MAX_LIST_ITEMS
+        )
+    return reply + "\n\n" + text(language, "out_of_stock_hint")
 
 
-def _pending_sales_answer(snapshot: dict) -> str:
+def _pending_sales_answer(snapshot: dict, language: str) -> str:
     orders = [
         order
         for order in snapshot["recent_sales_orders"]
@@ -171,20 +211,33 @@ def _pending_sales_answer(snapshot: dict) -> str:
     ]
     total = int(snapshot["order_status_counts"].get("Pending", len(orders)))
     if not orders:
-        return "There are no pending sales orders right now."
+        return text(language, "no_pending_sales")
 
     lines = [
-        f"- Order #{order['id']}: {order['customer_name']} — "
-        f"{order['product_name'] or 'product'} × {order['quantity']}"
+        text(
+            language,
+            "pending_sales_line",
+            id=order["id"],
+            customer=order["customer_name"],
+            product=order["product_name"]
+            or text(language, "generic_product"),
+            quantity=order["quantity"],
+        )
         for order in orders[:MAX_LIST_ITEMS]
     ]
-    header = f"{total} pending sales order(s)."
+    header = text(language, "pending_sales_header", count=total)
     if total > len(orders):
-        header += f" Showing the latest {len(orders)}."
-    return header + "\n" + "\n".join(lines) + "\n\nOpen Sales Orders to confirm, ship or cancel an order."
+        header += text(language, "showing_latest", count=len(orders))
+    return (
+        header
+        + "\n"
+        + "\n".join(lines)
+        + "\n\n"
+        + text(language, "sales_hint")
+    )
 
 
-def _pending_purchase_answer(snapshot: dict) -> str:
+def _pending_purchase_answer(snapshot: dict, language: str) -> str:
     open_statuses = {"Pending", "Approved", "Ordered"}
     orders = [
         order
@@ -196,70 +249,117 @@ def _pending_purchase_answer(snapshot: dict) -> str:
         for status in open_statuses
     )
     if not orders:
-        return "There are no open purchase orders right now."
+        return text(language, "no_open_purchases")
 
     lines = [
-        f"- PO #{order['id']}: {order['supplier_name'] or 'supplier'} — "
-        f"{order['product_name'] or 'product'} × {order['quantity']} "
-        f"({order['status']})"
+        text(
+            language,
+            "open_purchases_line",
+            id=order["id"],
+            supplier=order["supplier_name"]
+            or text(language, "generic_supplier"),
+            product=order["product_name"]
+            or text(language, "generic_product"),
+            quantity=order["quantity"],
+            status=status_label(order["status"], language),
+        )
         for order in orders[:MAX_LIST_ITEMS]
     ]
-    header = f"{total} open purchase order(s) (Pending, Approved or Ordered)."
+    header = text(language, "open_purchases_header", count=total)
     if total > len(orders):
-        header += f" Showing the latest {len(orders)}."
-    return header + "\n" + "\n".join(lines) + "\n\nOpen Purchase Orders to approve, order or receive stock."
-
-
-def _count_answer(text: str, snapshot: dict):
-    counts = snapshot["counts"]
-    if "product" in text:
-        return f"The catalog has {counts['products']} product(s)."
-    if "supplier" in text or "vendor" in text:
-        return f"There are {counts['suppliers']} supplier(s)."
-    if "purchase" in text:
-        return f"There are {counts['purchase_orders']} purchase order(s)."
-    if "order" in text or "sale" in text:
-        return f"There are {counts['sales_orders']} sales order(s)."
-    if "categor" in text:
-        return f"There are {counts['categories']} categor(y/ies)."
-    return None
-
-
-def _sales_summary_answer(snapshot: dict) -> str:
-    counts = snapshot["order_status_counts"]
-    statuses = ["Pending", "Confirmed", "Shipped", "Delivered", "Cancelled"]
-    lines = [f"- {status}: {int(counts.get(status, 0))}" for status in statuses]
+        header += text(language, "showing_latest", count=len(orders))
     return (
-        f"Sales orders: {snapshot['counts']['sales_orders']} total\n"
+        header
+        + "\n"
         + "\n".join(lines)
-        + "\n\nOpen Sales Orders for the full list and status controls."
+        + "\n\n"
+        + text(language, "purchases_hint")
     )
 
 
-def _supplier_list_answer(snapshot: dict) -> str:
+def _count_answer(value: str, snapshot: dict, language: str):
+    counts = snapshot["counts"]
+    if _contains_any(value, entity_terms("product", language)):
+        return text(language, "count_products", count=counts["products"])
+    if _contains_any(value, entity_terms("supplier", language)):
+        return text(language, "count_suppliers", count=counts["suppliers"])
+    if _contains_any(value, entity_terms("purchase", language)):
+        return text(
+            language,
+            "count_purchase_orders",
+            count=counts["purchase_orders"],
+        )
+    if _contains_any(value, entity_terms("order", language)):
+        return text(language, "count_sales_orders", count=counts["sales_orders"])
+    if _contains_any(value, entity_terms("category", language)):
+        return text(language, "count_categories", count=counts["categories"])
+    return None
+
+
+def _sales_summary_answer(snapshot: dict, language: str) -> str:
+    counts = snapshot["order_status_counts"]
+    statuses = ["Pending", "Confirmed", "Shipped", "Delivered", "Cancelled"]
+    lines = [
+        text(
+            language,
+            "sales_summary_line",
+            status=status_label(status, language),
+            count=int(counts.get(status, 0)),
+        )
+        for status in statuses
+    ]
+    return (
+        text(
+            language,
+            "sales_summary_header",
+            count=snapshot["counts"]["sales_orders"],
+        )
+        + "\n"
+        + "\n".join(lines)
+        + "\n\n"
+        + text(language, "sales_summary_hint")
+    )
+
+
+def _supplier_list_answer(snapshot: dict, language: str) -> str:
     suppliers = snapshot["suppliers"]
     if not suppliers:
-        return "No suppliers are registered yet. Open Suppliers to add one."
+        return text(language, "no_suppliers")
     lines = []
     for supplier in suppliers[:MAX_LIST_ITEMS]:
         rating = supplier.get("performance_rating")
-        rating_text = f"{rating:.1f}/5" if rating is not None else "not rated"
-        lines.append(
-            f"- {supplier['name']}: lead time "
-            f"{supplier['lead_time_days']} days, rating {rating_text}"
+        rating_text = (
+            f"{rating:.1f}/5"
+            if rating is not None
+            else text(language, "not_rated")
         )
-    reply = f"{len(suppliers)} supplier(s):\n" + "\n".join(lines)
+        lines.append(
+            text(
+                language,
+                "supplier_list_line",
+                name=supplier["name"],
+                lead_time=supplier["lead_time_days"],
+                rating=rating_text,
+            )
+        )
+    reply = (
+        text(language, "supplier_list_header", count=len(suppliers))
+        + "\n"
+        + "\n".join(lines)
+    )
     if len(suppliers) > MAX_LIST_ITEMS:
-        reply += f"\n...and {len(suppliers) - MAX_LIST_ITEMS} more."
+        reply += "\n" + text(
+            language, "more_line", count=len(suppliers) - MAX_LIST_ITEMS
+        )
     return reply
 
 
-def _order_lookup(text: str, snapshot: dict):
-    match = re.search(r"(?:order|#)\s*#?(\d+)", text)
+def _order_lookup(value: str, snapshot: dict, language: str):
+    match = re.search(r"(?:order|#|ऑर्डर|অর্ডার)\s*#?(\d+)", value)
     if not match:
         return None
     order_id = int(match.group(1))
-    is_purchase = "purchase" in text or "po " in f"{text} "
+    is_purchase = _contains_any(value, purchase_terms(language))
 
     if is_purchase:
         record = next(
@@ -271,15 +371,37 @@ def _order_lookup(text: str, snapshot: dict):
             None,
         )
         if not record:
-            return f"I could not find purchase order #{order_id} in the recent records."
-        return (
-            f"Purchase order #{record['id']}\n"
-            f"- Supplier: {record['supplier_name'] or record['supplier_id']}\n"
-            f"- Product: {record['product_name'] or record['product_id']}\n"
-            f"- Quantity: {record['quantity']}\n"
-            f"- Unit price: {_money(record['unit_price'])}\n"
-            f"- Total: {_money(record['total_amount'])}\n"
-            f"- Status: {record['status']}"
+            return text(language, "not_found_purchase", id=order_id)
+        return "\n".join(
+            [
+                text(language, "purchase_order_title", id=record["id"]),
+                text(
+                    language,
+                    "label_supplier",
+                    value=record["supplier_name"] or record["supplier_id"],
+                ),
+                text(
+                    language,
+                    "label_product",
+                    value=record["product_name"] or record["product_id"],
+                ),
+                text(language, "label_quantity", value=record["quantity"]),
+                text(
+                    language,
+                    "label_unit_price",
+                    value=_money(record["unit_price"]),
+                ),
+                text(
+                    language,
+                    "label_total",
+                    value=_money(record["total_amount"]),
+                ),
+                text(
+                    language,
+                    "label_status",
+                    value=status_label(record["status"], language),
+                ),
+            ]
         )
 
     record = next(
@@ -291,19 +413,33 @@ def _order_lookup(text: str, snapshot: dict):
         None,
     )
     if not record:
-        return f"I could not find sales order #{order_id} in the recent records."
-    return (
-        f"Sales order #{record['id']}\n"
-        f"- Customer: {record['customer_name']}\n"
-        f"- Product: {record['product_name'] or record['product_id']}\n"
-        f"- Quantity: {record['quantity']}\n"
-        f"- Total: {_money(record['total_amount'])}\n"
-        f"- Status: {record['status']}"
+        return text(language, "not_found_sales", id=order_id)
+    return "\n".join(
+        [
+            text(language, "sales_order_title", id=record["id"]),
+            text(language, "label_customer", value=record["customer_name"]),
+            text(
+                language,
+                "label_product",
+                value=record["product_name"] or record["product_id"],
+            ),
+            text(language, "label_quantity", value=record["quantity"]),
+            text(
+                language,
+                "label_total",
+                value=_money(record["total_amount"]),
+            ),
+            text(
+                language,
+                "label_status",
+                value=status_label(record["status"], language),
+            ),
+        ]
     )
 
 
-def _supplier_for_product(text: str, snapshot: dict):
-    product = _find_product(text, snapshot["products"])
+def _supplier_for_product(value: str, snapshot: dict, language: str):
+    product = _find_product(value, snapshot["products"])
     if not product:
         return None
     supplier_names = []
@@ -312,122 +448,102 @@ def _supplier_for_product(text: str, snapshot: dict):
             if order["supplier_name"] not in supplier_names:
                 supplier_names.append(order["supplier_name"])
     if not supplier_names:
-        return (
-            f"No recent purchase orders link {product['name']} to a supplier. "
-            "Open Purchase Orders or Suppliers to check the full record."
-        )
-    return (
-        f"Supplier(s) linked to {product['name']} in recent purchase orders: "
-        + ", ".join(supplier_names)
-        + "."
+        return text(language, "supplier_for_none", product=product["name"])
+    return text(
+        language,
+        "supplier_for_header",
+        product=product["name"],
+        suppliers=", ".join(supplier_names),
     )
 
 
-def _local_answer(text: str, snapshot: dict, knowledge_entry, doc_match) -> str:
+def _local_answer(
+    value: str,
+    snapshot: dict,
+    knowledge_entry,
+    doc_match,
+    language: str,
+) -> str:
     if knowledge_entry:
-        return knowledge_entry["answer"]
+        return knowledge_answer(knowledge_entry, language)
 
-    if _contains_any(
-        text,
-        [
-            "low stock", "low on stock", "low-stock", "running low", "reorder",
-            "restock", "minimum stock", "stock kam", "kam stock", "need to order",
-            "should i order",
-        ],
-    ):
-        return _low_stock_answer(snapshot)
+    if _contains_any(value, terms_for("low_stock", language)):
+        return _low_stock_answer(snapshot, language)
 
-    if _contains_any(text, ["out of stock", "no stock", "zero stock", "khatam"]):
-        return _out_of_stock_answer(snapshot)
+    if _contains_any(value, terms_for("out_of_stock", language)):
+        return _out_of_stock_answer(snapshot, language)
 
-    if _contains_any(
-        text,
-        ["pending sales", "pending order", "open sales", "sales pending"],
-    ):
-        return _pending_sales_answer(snapshot)
+    if _contains_any(value, terms_for("pending_sales", language)):
+        return _pending_sales_answer(snapshot, language)
 
-    if _contains_any(
-        text,
-        ["pending purchase", "open purchase", "purchase pending", "awaiting delivery"],
-    ):
-        return _pending_purchase_answer(snapshot)
+    if _contains_any(value, terms_for("pending_purchase", language)):
+        return _pending_purchase_answer(snapshot, language)
 
-    if _contains_any(text, ["how many", "count", "total", "kitne"]):
-        count_answer = _count_answer(text, snapshot)
+    if _contains_any(value, terms_for("count", language)):
+        count_answer = _count_answer(value, snapshot, language)
         if count_answer:
             return count_answer
 
-    if _contains_any(
-        text,
-        ["who supplies", "which supplier", "supplier for", "vendor for"],
-    ):
-        supplier_answer = _supplier_for_product(text, snapshot)
+    if _contains_any(value, terms_for("supplier_for", language)):
+        supplier_answer = _supplier_for_product(value, snapshot, language)
         if supplier_answer:
             return supplier_answer
 
-    order_answer = _order_lookup(text, snapshot)
+    order_answer = _order_lookup(value, snapshot, language)
     if order_answer:
         return order_answer
 
-    product = _find_product(text, snapshot["products"])
+    product = _find_product(value, snapshot["products"])
     if product and (
-        len(text) <= len(product["name"].lower()) + 25
-        or _contains_any(
-            text,
-            ["stock", "price", "quantity", "sku", "detail", "about", "status"],
-        )
+        len(value) <= len(product["name"].lower()) + 25
+        or _contains_any(value, terms_for("product_detail", language))
     ):
-        return _product_answer(product)
+        return _product_answer(product, language)
 
-    supplier = _find_supplier(text, snapshot["suppliers"])
+    supplier = _find_supplier(value, snapshot["suppliers"])
     if supplier and (
-        len(text) <= len(supplier["name"].lower()) + 25
-        or _contains_any(text, ["supplier", "vendor", "lead time", "rating", "contact"])
+        len(value) <= len(supplier["name"].lower()) + 25
+        or _contains_any(value, terms_for("supplier_detail", language))
     ):
-        return _supplier_answer(supplier)
+        return _supplier_answer(supplier, language)
 
-    if _contains_any(text, ["supplier", "vendor"]):
-        return _supplier_list_answer(snapshot)
+    if _contains_any(value, terms_for("supplier_list", language)):
+        return _supplier_list_answer(snapshot, language)
 
-    if _contains_any(text, ["sales", "orders", "order summary"]):
-        return _sales_summary_answer(snapshot)
+    if _contains_any(value, terms_for("sales_summary", language)):
+        return _sales_summary_answer(snapshot, language)
 
     if doc_match:
         return (
-            f"From {doc_match['source']} — {doc_match['title']}:\n\n"
-            f"{doc_match['text'][:900]}"
+            text(
+                language,
+                "doc_from",
+                source=doc_match["source"],
+                title=doc_match["title"],
+            )
+            + "\n\n"
+            + doc_match["text"][:900]
         )
 
-    return (
-        "I could not find that in the current workspace data. I can help with "
-        "live stock levels, low-stock items, pending orders, suppliers, product "
-        "prices and reorder needs.\n\nTry:\n"
-        "- Show low-stock products\n"
-        "- What are the pending purchase orders?\n"
-        "- What is the stock of a product?\n"
-        "- How do I record a stock movement?"
-    )
+    return fallback_text(language)
 
 
-def answer_chat(message: str, db, history=None) -> dict:
+def answer_chat(message: str, db, history=None, language: str = "en") -> dict:
+    language = normalize_language(language)
     snapshot = build_snapshot(db)
-    text = _normalize(message)
-    knowledge_entry = find_knowledge(message)
+    value = _normalize(message)
+    knowledge_entry = find_knowledge(message, language)
     doc_match = search_docs(message)
 
-    if _is_greeting(text) and not knowledge_entry:
-        return _result(
-            PROJECT_INTRO
-            + "\n\nAsk me about live stock, low-stock items, orders, suppliers "
-            "or how to use any page."
-        )
+    if _is_greeting(value, language) and not knowledge_entry:
+        return _result(intro_text(language), language)
 
     if not (
         knowledge_entry
         or doc_match
-        or _is_project_related(text, snapshot)
+        or _is_project_related(value, snapshot, language)
     ):
-        return _result(SCOPE_REFUSAL)
+        return _result(refusal_text(language), language)
 
     if is_configured():
         llm_reply = ask_llm(
@@ -436,10 +552,12 @@ def answer_chat(message: str, db, history=None) -> dict:
             snapshot,
             knowledge_entry=knowledge_entry,
             doc_match=doc_match,
+            language=language,
         )
         if llm_reply:
-            return _result(llm_reply, mode="llm")
+            return _result(llm_reply, language, mode="llm")
 
     return _result(
-        _local_answer(text, snapshot, knowledge_entry, doc_match)
+        _local_answer(value, snapshot, knowledge_entry, doc_match, language),
+        language,
     )

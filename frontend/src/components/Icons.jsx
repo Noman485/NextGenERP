@@ -180,6 +180,35 @@ const ICON_PATHS = {
       <path d="M21 3l-6.5 18-4-7.5L3 9.5 21 3Z" />
     </>
   ),
+  mic: (
+    <>
+      <rect x="9" y="3" width="6" height="11" rx="3" />
+      <path d="M5.5 11.5a6.5 6.5 0 0 0 13 0" />
+      <path d="M12 18v3" />
+      <path d="M9 21h6" />
+    </>
+  ),
+  volume: (
+    <>
+      <path d="M4 9.5h3l4.5-3.5v12L7 14.5H4z" />
+      <path d="M15.5 8.5a5 5 0 0 1 0 7" />
+      <path d="M18 6a8.5 8.5 0 0 1 0 12" />
+    </>
+  ),
+  volumeOff: (
+    <>
+      <path d="M4 9.5h3l4.5-3.5v12L7 14.5H4z" />
+      <path d="m16 9.5 5 5" />
+      <path d="m21 9.5-5 5" />
+    </>
+  ),
+  globe: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M3.5 12h17" />
+      <path d="M12 3.5c2.4 2.4 3.6 5.3 3.6 8.5S14.4 18.1 12 20.5C9.6 18.1 8.4 15.2 8.4 12S9.6 5.9 12 3.5Z" />
+    </>
+  ),
 };
 
 export function Icon({ name, size = 18, className = '', title, strokeWidth = 1.6 }) {

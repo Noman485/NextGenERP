@@ -74,21 +74,32 @@ viewports.
 ## 4. Assistant
 
 The assistant is available from a floating launcher on every authenticated page.
+It supports English, Hindi and Bengali, with optional voice input and spoken
+replies.
 
 | Element | Behavior |
 | --- | --- |
-| Launcher | Visible on desktop and mobile; opens the panel |
+| Launcher | Visible on desktop and mobile; opens the panel; label follows the selected language |
 | Header | Names the assistant and states that it covers project help and live workspace data |
-| Suggestions | Project-specific starting points such as low stock, pending orders and how to add a product |
-| Conversation | Keeps context for follow-up questions; `role="log"` and `aria-live="polite"` |
-| Errors | Shows the HTTP status and a Retry action without losing the conversation |
+| Language selector | English / हिन्दी / বাংলা; changing it resets the conversation and suggestions to the chosen language |
+| Suggestions | Project-specific starting points in the selected language |
+| Voice input | Microphone button uses the browser Web Speech API and sends the recognized transcript automatically |
+| Spoken replies | Per-message speaker button; auto-speak toggle is off by default; playback stops on close, clear, Escape or language change |
+| Conversation | Keeps context for follow-up questions; `role="log"`, `aria-live="polite"` and auto-scroll to the latest message |
+| Errors | Shows the HTTP status and a Retry action without losing the conversation; microphone errors are shown separately |
 | Scope note | Reminds the user that answers can be wrong and should be verified |
 | Close | Close button and Escape; mobile panel fits the viewport |
 | Read-only | The assistant explains actions but never performs them |
 
-Verified on desktop and mobile: launcher, open, live low-stock answer, help
-answer, off-topic refusal, close, 404 route, zero horizontal overflow, mobile
+Verified on desktop and mobile: launcher, open, three language options, mic
+button enabled in Edge, auto-speak toggle, Hindi and Bengali welcome and
+suggestions, localized live low-stock answers, Bengali scope refusal, localized
+launcher after close, speaker play/stop state, zero horizontal overflow, mobile
 chat and Escape close, with no console errors.
+
+Not automated: real microphone capture and the browser permission prompt. The
+voice E2E confirms the controls, language payloads, localized replies and
+speaker state; actual audio input remains a manual check.
 
 ## 5. Authentication
 
@@ -116,6 +127,8 @@ Still recommended:
 
 - Recheck at 320 px, 768 px and 200% zoom.
 - Add a tablet-specific pass for the purchase-order table.
+- Add a manual microphone-permission and audio-capture pass in a real browser
+  session (headless Edge cannot grant or exercise a real microphone).
 
 ## 8. Remaining UX opportunities
 

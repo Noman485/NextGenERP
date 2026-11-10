@@ -24,6 +24,7 @@ Severity values: `critical`, `high`, `medium`, `low`.
 | BUG-012 | High | Assistant | Launcher and panel did not appear in the browser even though the source contained them | Vite served a stale transform because native file events are unreliable in the OneDrive folder | Enabled `server.watch.usePolling` and restarted the dev server | Assistant E2E: launcher visible, panel opened, desktop and mobile flows passed |
 | BUG-013 | Low | Copy | Dashboard described the product as "ML-driven demand signals" | Legacy AI-centric wording | Replaced with "demand forecasts feeding the reorder queue" | Source grep; production build |
 | BUG-014 | Low | Assistant | Off-topic questions could reach the optional provider | Scope check was not guaranteed before the LLM bridge | Engine refuses out-of-scope messages before calling the provider; tests assert the refusal path | `test_assistant.py` scope-refusal cases |
+| BUG-024 | Medium | Assistant | Hindi/Bengali greetings such as `नमस्ते` and `নমস্কার` were treated as off-topic | The greeting normalizer stripped Devanagari/Bengali combining marks, so the words no longer matched the greeting list | Preserve `U+0900-U+097F` and `U+0980-U+09FF` in `_is_greeting` and add localized greeting tests | `test_assistant_localizes_greeting_and_suggestions`; Hindi/Bengali greetings return the localized intro instead of a refusal |
 
 ## Open
 
@@ -47,6 +48,8 @@ Severity values: `critical`, `high`, `medium`, `low`.
 | BLK-002 | External LLM provider | No provider key is configured | A test key and a mock/live OpenAI-compatible endpoint |
 | BLK-003 | Rate limiting | The control does not exist yet | Implement BUG-015 first |
 | BLK-004 | Cross-browser E2E | Only headless Edge is installed | Firefox/WebKit runners or Playwright browsers |
+| BLK-005 | Voice microphone capture | Headless Edge cannot grant a real microphone permission or supply audio input | Manual or device-farm check with a real microphone |
+| BLK-006 | Cross-browser voice | Web Speech support and voice availability differ by browser | Test Firefox/Safari or document supported browsers |
 
 ## Triage rules
 

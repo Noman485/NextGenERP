@@ -11,10 +11,11 @@ NextGenERP is an inventory and procurement ERP application for managing product 
 - **Purchase orders:** create and view purchase orders and progress them through `Pending → Approved → Ordered → Received`. Receiving adds stock once. Unreceived orders can be cancelled or deleted.
 - **Inventory operations:** record stock-in and stock-out transactions with a reason and view transaction history. Stock-out operations reject quantities greater than available inventory.
 - **API health:** the `/health` endpoint checks database connectivity.
+- **Demand forecasting (ML):** an integrated XGBoost model produces a 7-day demand forecast and smart reorder recommendations. Results are available on the **Forecasting** page and through `GET /ml/insights`. See the [ML integration guide](./docs/ml-integration.md).
 
 ### Not included / pending
 
-- Demand forecasting and all other machine-learning/model-training functionality belong to a separate ML module/team and are intentionally not implemented or changed here.
+- The ML model is trained on the demo dataset (three products) and is not retrained automatically from ERP sales history; see the [ML integration guide](./docs/ml-integration.md) for details.
 - The dashboard search field and notification control are presentation-only; they do not currently perform search or deliver notifications.
 - User roles, account administration, password reset, and login rate limiting are not implemented.
 - Database schema creation uses SQLAlchemy `create_all`; a versioned migration system is not configured.
@@ -25,6 +26,7 @@ NextGenERP is an inventory and procurement ERP application for managing product 
 | --- | --- |
 | Frontend | React 19, React Router, Vite, Tailwind CSS |
 | Backend/API | Python 3.13, FastAPI, Pydantic, SQLAlchemy |
+| ML forecasting | XGBoost, pandas, NumPy, scikit-learn, Open-Meteo weather API |
 | Authentication | PyJWT bearer tokens, Argon2id password hashing |
 | Runtime database | PostgreSQL 17 (Compose); tests use temporary SQLite |
 | Web serving | Nginx serves the built SPA and proxies API paths to FastAPI |
@@ -117,6 +119,7 @@ When running the backend directly for local development, interactive OpenAPI doc
 | `/orders/`, `/orders/{order_id}`, `/orders/{order_id}/status` | Sales order operations and status transitions |
 | `/purchase-orders/`, `/purchase-orders/{purchase_order_id}`, `/purchase-orders/{purchase_order_id}/status` | Purchase order operations and status transitions |
 | `/inventory-transactions/` | Create and list inventory transactions |
+| `/ml/insights` | 7-day demand forecast and smart reorder recommendations |
 | `/health` | Database-backed readiness check |
 
 Business-resource routes require `Authorization: Bearer <token>`. Registration accepts a username of 3–80 letters/digits/periods/underscores/hyphens and a password of 12–128 characters. There is no default account; register an account through the UI or API.
@@ -151,4 +154,4 @@ For production configuration, secrets, database access, CORS, and HTTPS requirem
 - [ ] Create a sales order, progress its status, and confirm stock changes and cancellation behavior.
 - [ ] Create a purchase order, progress it through receipt, and confirm stock is added once.
 - [ ] Record stock-in and stock-out operations, then inspect inventory transaction history.
-- [ ] Confirm no demand-forecasting/model-training screens are represented as implemented; that work belongs to the separate ML team.
+- [ ] Open the Forecasting page and confirm the 7-day demand forecast and reorder recommendations load successfully.

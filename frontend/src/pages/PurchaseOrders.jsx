@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { apiFetch } from '../api';
 
 const PURCHASE_ORDERS_URL = '/purchase-orders/';
@@ -649,7 +650,16 @@ export default function PurchaseOrders() {
               </select>
               {formErrors.supplier_id && <p id="purchase-order-supplier-error" className="mt-1 text-xs text-red-800">{formErrors.supplier_id}</p>}
               {!optionsLoading && !optionsError && suppliers.length === 0 && (
-                <p className="mt-1 text-xs text-stone-500">Add a supplier before creating a purchase order.</p>
+                <p className="mt-1 text-xs text-stone-600">
+                  No suppliers yet.{' '}
+                  <Link
+                    to="/suppliers"
+                    className="font-medium text-teal-800 underline decoration-teal-300 underline-offset-2 hover:decoration-teal-600"
+                  >
+                    Add a supplier
+                  </Link>{' '}
+                  before creating a purchase order.
+                </p>
               )}
             </div>
 
@@ -679,7 +689,16 @@ export default function PurchaseOrders() {
               </select>
               {formErrors.product_id && <p id="purchase-order-product-error" className="mt-1 text-xs text-red-800">{formErrors.product_id}</p>}
               {!optionsLoading && !optionsError && products.length === 0 && (
-                <p className="mt-1 text-xs text-stone-500">Add a product before creating a purchase order.</p>
+                <p className="mt-1 text-xs text-stone-600">
+                  No products yet.{' '}
+                  <Link
+                    to="/products"
+                    className="font-medium text-teal-800 underline decoration-teal-300 underline-offset-2 hover:decoration-teal-600"
+                  >
+                    Add a product
+                  </Link>{' '}
+                  before creating a purchase order.
+                </p>
               )}
             </div>
 

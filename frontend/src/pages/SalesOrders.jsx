@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { apiFetch } from '../api';
 
 const ORDERS_URL = '/orders/';
@@ -570,7 +571,16 @@ export default function SalesOrders() {
               {formErrors.product_id && <p id="order-product-error" className="mt-1 text-xs text-red-800">{formErrors.product_id}</p>}
               {productsError && <p role="alert" className="mt-1 text-xs text-red-800">{productsError}</p>}
               {!productsLoading && !productsError && products.length === 0 && (
-                <p className="mt-1 text-xs text-stone-500">Add a product to inventory before creating a sale.</p>
+                <p className="mt-1 text-xs text-stone-600">
+                  No products yet.{' '}
+                  <Link
+                    to="/products"
+                    className="font-medium text-teal-800 underline decoration-teal-300 underline-offset-2 hover:decoration-teal-600"
+                  >
+                    Add a product
+                  </Link>{' '}
+                  before creating a sale.
+                </p>
               )}
             </div>
 

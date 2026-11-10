@@ -1,0 +1,122 @@
+{
+  "1": {
+    "stock": 1051,
+    "lead_time": 4,
+    "supplier": "Supplier A",
+    "product": "Store 2 / Item 28"
+  },
+  "2": {
+    "stock": 1739,
+    "lead_time": 5,
+    "supplier": "Supplier B",
+    "product": "Store 2 / Item 15"
+  },
+  "3": {
+    "stock": 2321,
+    "lead_time": 6,
+    "supplier": "Supplier C",
+    "product": "Store 2 / Item 18"
+  },
+  "4": {
+    "stock": 553,
+    "lead_time": 7,
+    "supplier": "Supplier D",
+    "product": "Store 8 / Item 15"
+  },
+  "5": {
+    "stock": 1198,
+    "lead_time": 3,
+    "supplier": "Supplier E",
+    "product": "Store 2 / Item 13"
+  },
+  "6": {
+    "stock": 1839,
+    "lead_time": 4,
+    "supplier": "Supplier F",
+    "product": "Store 8 / Item 28"
+  },
+  "7": {
+    "stock": 2340,
+    "lead_time": 5,
+    "supplier": "Supplier A",
+    "product": "Store 8 / Item 18"
+  },
+  "8": {
+    "stock": 704,
+    "lead_time": 6,
+    "supplier": "Supplier B",
+    "product": "Store 8 / Item 13"
+  },
+  "9": {
+    "stock": 1333,
+    "lead_time": 7,
+    "supplier": "Supplier C",
+    "product": "Store 2 / Item 25"
+  },
+  "10": {
+    "stock": 2047,
+    "lead_time": 3,
+    "supplier": "Supplier D",
+    "product": "Store 2 / Item 45"
+  },
+  "11": {
+    "stock": 2603,
+    "lead_time": 4,
+    "supplier": "Supplier E",
+    "product": "Store 2 / Item 38"
+  },
+  "12": {
+    "stock": 894,
+    "lead_time": 5,
+    "supplier": "Supplier F",
+    "product": "Store 2 / Item 22"
+  },
+  "13": {
+    "stock": 1457,
+    "lead_time": 6,
+    "supplier": "Supplier A",
+    "product": "Store 3 / Item 15"
+  },
+  "14": {
+    "stock": 1998,
+    "lead_time": 7,
+    "supplier": "Supplier B",
+    "product": "Store 3 / Item 28"
+  },
+  "15": {
+    "stock": 415,
+    "lead_time": 3,
+    "supplier": "Supplier C",
+    "product": "Store 8 / Item 25"
+  },
+  "16": {
+    "stock": 1038,
+    "lead_time": 4,
+    "supplier": "Supplier D",
+    "product": "Store 2 / Item 8"
+  },
+  "17": {
+    "stock": 1626,
+    "lead_time": 5,
+    "supplier": "Supplier E",
+    "product": "Store 10 / Item 15"
+  },
+  "18": {
+    "stock": 2295,
+    "lead_time": 6,
+    "supplier": "Supplier F",
+    "product": "Store 8 / Item 38"
+  },
+  "19": {
+    "stock": 579,
+    "lead_time": 7,
+    "supplier": "Supplier A",
+    "product": "Store 8 / Item 45"
+  },
+  "20": {
+    "stock": 1185,
+    "lead_time": 3,
+    "supplier": "Supplier B",
+    "product": "Store 8 / Item 22"
+  }
+}

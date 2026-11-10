@@ -1,0 +1,355 @@
+{
+  "dataset": {
+    "name": "Store Item Demand Forecasting Challenge (Kaggle)",
+    "url": "https://raw.githubusercontent.com/jgonzalezab/Store-Item-Demand-Forecasting/master/Data/train.csv",
+    "rows": 913000,
+    "date_range": {
+      "start": "2013-01-01",
+      "end": "2017-12-31"
+    },
+    "selection": {
+      "top_series": 20
+    }
+  },
+  "model": {
+    "type": "XGBRegressor",
+    "selected_candidate": "square",
+    "objective": {
+      "objective": "reg:squarederror"
+    },
+    "log_target": false,
+    "features": [
+      "product_id",
+      "lag_1",
+      "lag_3",
+      "lag_7",
+      "lag_14",
+      "lag_21",
+      "lag_28",
+      "roll_mean_7",
+      "roll_mean_28",
+      "roll_std_7",
+      "roll_std_28",
+      "dow",
+      "month",
+      "is_weekend",
+      "rain_prob",
+      "temp"
+    ],
+    "n_estimators": 2000,
+    "learning_rate": 0.03,
+    "max_depth": 7
+  },
+  "split": {
+    "train_end": "2017-07-01",
+    "validation_start": "2017-07-01",
+    "test_start": "2017-10-01"
+  },
+  "metrics": {
+    "baseline_mae": 13.518478260869566,
+    "mae": 9.155278910761295,
+    "rmse": 11.5503994596521,
+    "r2": 0.7435324799382891,
+    "wape": 0.08422561808237103,
+    "mae_improvement_pct": 32.27581733617117
+  },
+  "candidates": [
+    {
+      "name": "poisson",
+      "params": {
+        "objective": "count:poisson"
+      },
+      "log_target": false,
+      "validation": {
+        "mae": 9.93083608461463,
+        "rmse": 12.732522570716755,
+        "r2": 0.7205283967621452,
+        "wape": 0.07360115680171314
+      },
+      "test": {
+        "mae": 9.137154145862745,
+        "rmse": 11.535270783316111,
+        "r2": 0.7442038806288385,
+        "wape": 0.08405887608127441
+      }
+    },
+    {
+      "name": "tweedie_1.5",
+      "params": {
+        "objective": "reg:tweedie",
+        "tweedie_variance_power": 1.5
+      },
+      "log_target": false,
+      "validation": {
+        "mae": 9.938649716584578,
+        "rmse": 12.731149995624222,
+        "r2": 0.7205886479941527,
+        "wape": 0.07365906656348055
+      },
+      "test": {
+        "mae": 9.147251552084217,
+        "rmse": 11.591214290604793,
+        "r2": 0.7417167552162239,
+        "wape": 0.08415176896726095
+      }
+    },
+    {
+      "name": "tweedie_1.2",
+      "params": {
+        "objective": "reg:tweedie",
+        "tweedie_variance_power": 1.2
+      },
+      "log_target": false,
+      "validation": {
+        "mae": 9.942401749154795,
+        "rmse": 12.743682286992113,
+        "r2": 0.7200382832650367,
+        "wape": 0.07368687428633215
+      },
+      "test": {
+        "mae": 9.127021308567214,
+        "rmse": 11.53493867047592,
+        "r2": 0.744218609707048,
+        "wape": 0.08396565724081494
+      }
+    },
+    {
+      "name": "log1p_square",
+      "params": {
+        "objective": "reg:squarederror"
+      },
+      "log_target": true,
+      "validation": {
+        "mae": 10.049546801525613,
+        "rmse": 12.8927502132823,
+        "r2": 0.7134503289835934,
+        "wape": 0.07448096651913919
+      },
+      "test": {
+        "mae": 9.224871042500371,
+        "rmse": 11.635852648628356,
+        "r2": 0.7397236007975532,
+        "wape": 0.08486584328648838
+      }
+    },
+    {
+      "name": "square",
+      "params": {
+        "objective": "reg:squarederror"
+      },
+      "log_target": false,
+      "validation": {
+        "mae": 9.923761541947075,
+        "rmse": 12.707987363472144,
+        "r2": 0.7216044266136123,
+        "wape": 0.07354872470840916
+      },
+      "test": {
+        "mae": 9.155278910761295,
+        "rmse": 11.5503994596521,
+        "r2": 0.7435324799382891,
+        "wape": 0.08422561808237103
+      }
+    }
+  ],
+  "feature_importance": {
+    "lag_7": 0.5484909415245056,
+    "lag_14": 0.16612926125526428,
+    "lag_1": 0.0593232735991478,
+    "month": 0.05062318220734596,
+    "dow": 0.039731789380311966,
+    "lag_28": 0.029054995626211166,
+    "is_weekend": 0.026302706450223923,
+    "lag_21": 0.025627993047237396,
+    "lag_3": 0.013204998336732388,
+    "roll_mean_7": 0.013135627843439579,
+    "roll_mean_28": 0.011135568842291832,
+    "roll_std_28": 0.007129351608455181,
+    "roll_std_7": 0.005615007597953081,
+    "product_id": 0.004495252855122089,
+    "rain_prob": 0.0,
+    "temp": 0.0
+  },
+  "products": [
+    {
+      "product_id": 1,
+      "store": 2,
+      "item": 28,
+      "product": "Store 2 / Item 28",
+      "total_sales": 205677.0,
+      "cv": 0.2621364396400685,
+      "last_30_avg": 95.53333333333333
+    },
+    {
+      "product_id": 2,
+      "store": 2,
+      "item": 15,
+      "product": "Store 2 / Item 15",
+      "total_sales": 205569.0,
+      "cv": 0.2636023416826555,
+      "last_30_avg": 96.6
+    },
+    {
+      "product_id": 3,
+      "store": 2,
+      "item": 18,
+      "product": "Store 2 / Item 18",
+      "total_sales": 197422.0,
+      "cv": 0.26435456965649695,
+      "last_30_avg": 92.83333333333333
+    },
+    {
+      "product_id": 4,
+      "store": 8,
+      "item": 15,
+      "product": "Store 8 / Item 15",
+      "total_sales": 197295.0,
+      "cv": 0.26160165617553766,
+      "last_30_avg": 92.1
+    },
+    {
+      "product_id": 5,
+      "store": 2,
+      "item": 13,
+      "product": "Store 2 / Item 13",
+      "total_sales": 197031.0,
+      "cv": 0.26393786678621095,
+      "last_30_avg": 92.13333333333334
+    },
+    {
+      "product_id": 6,
+      "store": 8,
+      "item": 28,
+      "product": "Store 8 / Item 28",
+      "total_sales": 196867.0,
+      "cv": 0.2632234336683755,
+      "last_30_avg": 91.93333333333334
+    },
+    {
+      "product_id": 7,
+      "store": 8,
+      "item": 18,
+      "product": "Store 8 / Item 18",
+      "total_sales": 189576.0,
+      "cv": 0.2649044525460032,
+      "last_30_avg": 86.63333333333334
+    },
+    {
+      "product_id": 8,
+      "store": 8,
+      "item": 13,
+      "product": "Store 8 / Item 13",
+      "total_sales": 189575.0,
+      "cv": 0.262543396361106,
+      "last_30_avg": 87.9
+    },
+    {
+      "product_id": 9,
+      "store": 2,
+      "item": 25,
+      "product": "Store 2 / Item 25",
+      "total_sales": 188856.0,
+      "cv": 0.26774174171649917,
+      "last_30_avg": 88.86666666666666
+    },
+    {
+      "product_id": 10,
+      "store": 2,
+      "item": 45,
+      "product": "Store 2 / Item 45",
+      "total_sales": 188774.0,
+      "cv": 0.2647168980331889,
+      "last_30_avg": 93.03333333333333
+    },
+    {
+      "product_id": 11,
+      "store": 2,
+      "item": 38,
+      "product": "Store 2 / Item 38",
+      "total_sales": 188533.0,
+      "cv": 0.2623232787306397,
+      "last_30_avg": 89.73333333333333
+    },
+    {
+      "product_id": 12,
+      "store": 2,
+      "item": 22,
+      "product": "Store 2 / Item 22",
+      "total_sales": 188096.0,
+      "cv": 0.2627132820771444,
+      "last_30_avg": 89.36666666666666
+    },
+    {
+      "product_id": 13,
+      "store": 3,
+      "item": 15,
+      "product": "Store 3 / Item 15",
+      "total_sales": 183373.0,
+      "cv": 0.26729459758304747,
+      "last_30_avg": 85.7
+    },
+    {
+      "product_id": 14,
+      "store": 3,
+      "item": 28,
+      "product": "Store 3 / Item 28",
+      "total_sales": 182862.0,
+      "cv": 0.2618222478095749,
+      "last_30_avg": 83.23333333333333
+    },
+    {
+      "product_id": 15,
+      "store": 8,
+      "item": 25,
+      "product": "Store 8 / Item 25",
+      "total_sales": 181221.0,
+      "cv": 0.26416670123384195,
+      "last_30_avg": 82.83333333333333
+    },
+    {
+      "product_id": 16,
+      "store": 2,
+      "item": 8,
+      "product": "Store 2 / Item 8",
+      "total_sales": 180939.0,
+      "cv": 0.2652010080505266,
+      "last_30_avg": 86.5
+    },
+    {
+      "product_id": 17,
+      "store": 10,
+      "item": 15,
+      "product": "Store 10 / Item 15",
+      "total_sales": 180757.0,
+      "cv": 0.2625895175380047,
+      "last_30_avg": 85.53333333333333
+    },
+    {
+      "product_id": 18,
+      "store": 8,
+      "item": 38,
+      "product": "Store 8 / Item 38",
+      "total_sales": 180679.0,
+      "cv": 0.26632609693856446,
+      "last_30_avg": 88.23333333333333
+    },
+    {
+      "product_id": 19,
+      "store": 8,
+      "item": 45,
+      "product": "Store 8 / Item 45",
+      "total_sales": 180667.0,
+      "cv": 0.2667281622819573,
+      "last_30_avg": 82.63333333333334
+    },
+    {
+      "product_id": 20,
+      "store": 8,
+      "item": 22,
+      "product": "Store 8 / Item 22",
+      "total_sales": 180618.0,
+      "cv": 0.2665176204565903,
+      "last_30_avg": 84.6
+    }
+  ]
+}

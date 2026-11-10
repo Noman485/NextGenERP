@@ -11,7 +11,7 @@ NextGenERP is an inventory and procurement ERP application for managing product 
 - **Purchase orders:** create and view purchase orders and progress them through `Pending → Approved → Ordered → Received`. Receiving adds stock once. Unreceived orders can be cancelled or deleted.
 - **Inventory operations:** record stock-in and stock-out transactions with a reason and view transaction history. Stock-out operations reject quantities greater than available inventory.
 - **API health:** the `/health` endpoint checks database connectivity.
-- **Demand forecasting (ML):** an integrated XGBoost model produces a 7-day demand forecast and smart reorder recommendations. Results are available on the **Forecasting** page and through `GET /ml/insights`. See the [ML integration guide](./docs/ml-integration.md).
+- **Demand forecasting (ML):** an integrated XGBoost model trained on the Kaggle Store Item Demand dataset produces a 7-day demand forecast and smart reorder recommendations (held-out test WAPE **8.42%**, R² **0.744**). Results are available on the **Forecasting** page and through `GET /ml/insights`. See the [ML integration guide](./docs/ml-integration.md).
 
 ### Not included / pending
 

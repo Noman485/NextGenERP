@@ -35,8 +35,11 @@ FastAPI routes/ml.py
 | `backend/ml/predict.py` | Loads the trained XGBoost model, builds lag/rolling/calendar/weather features, and generates the 7-day forecast |
 | `backend/ml/reorder.py` | Calculates safety stock, reorder point, target stock, days left, urgency, and recommended purchase quantity |
 | `backend/ml/service.py` | Combines forecast and recommendation output into the API response shape |
+| `backend/ml/train_store_item.py` | Reproducible training script: downloads the dataset, selects series, trains candidate objectives, and saves the artifacts below |
 | `backend/ml/demand_xgb.json` | Trained XGBoost model artifact |
-| `backend/ml/sales.csv` | Historical sales data used for lag/rolling features and demand variability |
+| `backend/ml/sales.csv` | Historical daily sales used for lag/rolling features and demand variability |
+| `backend/ml/inventory.json` | Default stock/lead-time/supplier values generated for the forecasted series |
+| `backend/ml/model_metadata.json` | Dataset, split, candidate metrics, feature importance, and selected product metadata |
 | `backend/routes/ml.py` | FastAPI router for `GET /ml/insights`; overlays live ERP inventory when a product name matches |
 | `frontend/src/pages/Forecasting.jsx` | React page showing summary cards, reorder recommendations, and daily forecast tables |
 
@@ -62,15 +65,15 @@ Response shape:
 {
   "summary": {
     "forecast_days": 7,
-    "total_products": 3,
-    "products_requiring_reorder": 1,
+    "total_products": 20,
+    "products_requiring_reorder": 3,
     "weather_source": "Open-Meteo (Live)"
   },
   "forecast": [
     {
       "date": "2026-11-12",
       "product_id": 1,
-      "product": "umbrella",
+      "product": "Store 2 / Item 28",
       "rain_prob": 0.35,
       "temp": 27.4,
       "predicted_demand": 42.1
@@ -79,7 +82,7 @@ Response shape:
   "recommendations": [
     {
       "product_id": 1,
-      "product": "umbrella",
+      "product": "Store 2 / Item 28",
       "current_stock": 400,
       "forecast_demand": 280.5,
       "demand_lt": 180.2,
@@ -104,10 +107,13 @@ When an ERP catalog product has the same name as a forecasted product, the recom
 
 ## Model and data
 
-- The model is the trained `demand_xgb.json` artifact from the separate ML project.
-- `sales.csv` contains the historical sales data used to build lag, rolling-mean, and variability features.
-- The demo model is trained for three products: `umbrella`, `notebook`, and `ice_cream`.
-- Weather is fetched from Open-Meteo for the next 7 days. If the weather request fails, the service falls back to default values (`rain_prob = 0.2`, `temp = 28.0`) and reports `weather_source: "Fallback"`.
+- **Dataset:** [Store Item Demand Forecasting Challenge](https://www.kaggle.com/competitions/demand-forecasting-kernels-only) (Kaggle), loaded from a public GitHub mirror so no Kaggle login is required. It contains 5 years (2013–2017) of daily sales for 10 stores × 50 items.
+- **Selection:** the 20 highest-volume store/item series are used; `sales.csv` contains their daily history.
+- **Features:** short and long lags (`lag_1`, `lag_3`, `lag_7`, `lag_14`, `lag_21`, `lag_28`), rolling means/standard deviations, day-of-week, month, and weekend flag.
+- **Model:** XGBoost with a time-based split (train before 2017-07-01, validation Jul–Sep 2017, test Oct–Dec 2017). Several objectives (Poisson, Tweedie, squared error, log-target) are compared and the best by validation WAPE is saved.
+- **Held-out test metrics:** MAE **9.155**, RMSE **11.550**, R² **0.744**, WAPE **8.42%**, and **32.28%** lower MAE than the lag-7 baseline (MAE 13.518).
+- **Weather:** fetched from Open-Meteo for the next 7 days. The training dataset has no weather signal, so `rain_prob`/`temp` have zero feature importance; they are kept for API/UI compatibility. If the weather request fails, the service falls back to `rain_prob = 0.2`, `temp = 28.0` and reports `weather_source: "Fallback"`.
+- **Forecasting method:** predictions are generated recursively day by day, so short lags (`lag_1`, `lag_3`) are available for later days in the 7-day horizon.
 
 ## Reorder logic
 
@@ -128,8 +134,11 @@ For each forecasted product:
 cd backend
 py -3.13 -m venv venv
 .\venv\Scripts\python.exe -m pip install -r requirements.txt
+.\venv\Scripts\python.exe -m ml.train_store_item   # optional: retrain the model
 .\venv\Scripts\python.exe -m uvicorn main:app --reload
 ```
+
+The training script downloads the dataset to `backend/ml/data/` (ignored by Git), trains the candidate models, and overwrites `demand_xgb.json`, `sales.csv`, `inventory.json`, and `model_metadata.json`.
 
 The backend requires `DATABASE_URL` and `JWT_SECRET_KEY` (at least 32 characters). For a quick local run without PostgreSQL, `backend/.env` can use:
 
@@ -156,10 +165,11 @@ Open <http://localhost:5173>, sign in, and choose **Forecasting** in the sidebar
 
 ## Limitations
 
-- The current model forecasts only the three products present in the demo training data. It is not automatically retrained from the ERP sales-order history.
-- Live inventory overlay matches ERP products by name, not by a stored model-product mapping.
+- The model is trained on a public store/item dataset, not on this ERP's own sales history. It is not automatically retrained from ERP sales orders.
+- Live inventory overlay matches ERP products by name, not by a stored model-product mapping. The dataset product names (`Store X / Item Y`) will not normally match ERP catalog names.
+- Default inventory in `inventory.json` is generated for demo purposes; replace it with real stock, lead times, and suppliers for production.
 - Forecast generation loads the model and fetches weather on each request; there is no cache yet.
-- The model and dataset are demo artifacts and should be retrained on real ERP data before production use.
+- Retrain on real ERP data before using recommendations for actual purchasing decisions.
 
 ## Future improvements
 

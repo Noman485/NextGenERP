@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '../api';
+import { Icon } from '../components/Icons';
+import Warehouse3D from '../components/Warehouse3D';
 
 const API_ENDPOINTS = [
   { key: 'products', label: 'Products', path: '/products/' },
@@ -20,10 +22,10 @@ const emptyDashboardData = {
 
 const numberFormatter = new Intl.NumberFormat('en-IN');
 const quickActions = [
-  { label: 'Add Product', path: '/products' },
-  { label: 'New Sale', path: '/sales-orders' },
-  { label: 'New Purchase Order', path: '/purchase-orders' },
-  { label: 'Add Supplier', path: '/suppliers' },
+  { label: 'Add Product', path: '/products', icon: 'plus' },
+  { label: 'New Sale', path: '/sales-orders', icon: 'cart' },
+  { label: 'New Purchase Order', path: '/purchase-orders', icon: 'clipboard' },
+  { label: 'Add Supplier', path: '/suppliers', icon: 'users' },
 ];
 
 async function requestCollection(endpoint) {
@@ -127,23 +129,59 @@ function getLatestById(records) {
     .slice(0, 3);
 }
 
-function StatCard({ label, value, detail, tone = 'teal', loading }) {
-  const valueStyles = {
-    teal: 'text-stone-900',
-    amber: 'text-amber-800',
-    red: 'text-red-800',
-  };
+const TONE_STYLES = {
+  teal: {
+    text: 'text-stone-900',
+    bar: 'from-teal-300 via-teal-400 to-emerald-500',
+    chip: 'bg-teal-50 text-teal-700',
+  },
+  amber: {
+    text: 'text-amber-900',
+    bar: 'from-amber-200 via-amber-300 to-orange-400',
+    chip: 'bg-amber-50 text-amber-700',
+  },
+  red: {
+    text: 'text-red-900',
+    bar: 'from-rose-300 via-rose-400 to-red-500',
+    chip: 'bg-rose-50 text-rose-700',
+  },
+};
+
+function StatCard({ label, value, detail, tone = 'teal', icon, loading }) {
+  const styles = TONE_STYLES[tone] ?? TONE_STYLES.teal;
 
   return (
-    <div className="min-h-24 rounded-xl border border-stone-200 bg-[#fffdf9] p-3 shadow-sm">
-      <p className="text-[10px] font-medium uppercase leading-snug tracking-[0.16em] text-stone-500">{label}</p>
-      <div className="mt-2 flex items-end justify-between gap-2">
-        <p className={`text-2xl font-semibold leading-none tracking-tight ${valueStyles[tone]}`} aria-live="polite">
-          {loading ? '—' : numberFormatter.format(value)}
+    <div className="group relative overflow-hidden rounded-xl border border-stone-200/80 bg-[#fffdf9] p-4 shadow-[0_1px_2px_rgba(28,25,23,0.04)] transition duration-300 hover:-translate-y-0.5 hover:border-stone-300 hover:shadow-[0_16px_30px_-24px_rgba(28,25,23,0.55)]">
+      <div className={`absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r ${styles.bar}`} />
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-[9px] font-semibold uppercase leading-snug tracking-[0.18em] text-stone-500">
+          {label}
         </p>
-        <p className="text-right text-[11px] leading-tight text-stone-500">{detail}</p>
+        {icon && (
+          <span className={`rounded-md p-1.5 ${styles.chip}`}>
+            <Icon name={icon} size={14} />
+          </span>
+        )}
       </div>
+      <p
+        className={`mt-3 text-2xl font-semibold leading-none tracking-tight tabular-nums ${styles.text}`}
+        aria-live="polite"
+      >
+        {loading ? '—' : numberFormatter.format(value)}
+      </p>
+      <p className="mt-1.5 text-[11px] leading-tight text-stone-500">{detail}</p>
     </div>
+  );
+}
+
+function SectionHeading({ icon, title }) {
+  return (
+    <h2 className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.24em] text-stone-500">
+      <span className="flex h-6 w-6 items-center justify-center rounded-md border border-stone-200 bg-[#fffdf9] text-teal-700">
+        <Icon name={icon} size={12} />
+      </span>
+      {title}
+    </h2>
   );
 }
 
@@ -296,46 +334,132 @@ function Dashboard() {
     [dashboardData.purchaseOrders],
   );
 
+  const warehouseItems = useMemo(
+    () =>
+      [...dashboardData.products]
+        .sort((first, second) => getProductQuantity(second) - getProductQuantity(first))
+        .slice(0, 12)
+        .map((product) => {
+          const quantity = getProductQuantity(product);
+          const reorderLevel = getProductReorderLevel(product);
+          const tone = quantity <= 0 ? 'red' : quantity <= reorderLevel ? 'amber' : 'teal';
+          return { id: product.id, label: product.name, value: quantity, tone };
+        }),
+    [dashboardData.products],
+  );
+
   const inventoryStats = [
-    { label: 'Total Products', value: dashboardData.products.length, detail: 'products', tone: 'teal' },
-    { label: 'Total Categories', value: dashboardData.categories.length, detail: 'categories', tone: 'teal' },
-    { label: 'Low Stock', value: metrics.lowStockCount, detail: 'products to review', tone: 'amber' },
-    { label: 'Out of Stock', value: metrics.outOfStockCount, detail: 'products unavailable', tone: 'red' },
-    { label: 'Total Units', value: metrics.totalUnits, detail: 'units on hand', tone: 'teal' },
+    { label: 'Total Products', value: dashboardData.products.length, detail: 'products in catalog', tone: 'teal', icon: 'box' },
+    { label: 'Total Categories', value: dashboardData.categories.length, detail: 'categories tracked', tone: 'teal', icon: 'tag' },
+    { label: 'Low Stock', value: metrics.lowStockCount, detail: 'products to review', tone: 'amber', icon: 'clock' },
+    { label: 'Out of Stock', value: metrics.outOfStockCount, detail: 'products unavailable', tone: 'red', icon: 'alert' },
+    { label: 'Total Units', value: metrics.totalUnits, detail: 'units on hand', tone: 'teal', icon: 'layers' },
   ];
   const salesStats = [
-    { label: 'Total Orders', value: dashboardData.orders.length, detail: 'sales orders', tone: 'teal' },
-    { label: 'Pending Orders', value: metrics.pendingOrders, detail: 'awaiting action', tone: 'amber' },
-    { label: 'Confirmed Orders', value: metrics.confirmedOrders, detail: 'confirmed', tone: 'teal' },
-    { label: 'Delivered Orders', value: metrics.deliveredOrders, detail: 'delivered', tone: 'teal' },
+    { label: 'Total Orders', value: dashboardData.orders.length, detail: 'sales orders', tone: 'teal', icon: 'cart' },
+    { label: 'Pending Orders', value: metrics.pendingOrders, detail: 'awaiting action', tone: 'amber', icon: 'clock' },
+    { label: 'Confirmed Orders', value: metrics.confirmedOrders, detail: 'confirmed', tone: 'teal', icon: 'check' },
+    { label: 'Delivered Orders', value: metrics.deliveredOrders, detail: 'delivered', tone: 'teal', icon: 'truck' },
   ];
   const procurementStats = [
-    { label: 'Total Purchase Orders', value: dashboardData.purchaseOrders.length, detail: 'purchase orders', tone: 'teal' },
-    { label: 'Pending Purchase Orders', value: metrics.pendingPurchaseOrders, detail: 'awaiting action', tone: 'amber' },
-    { label: 'Received Purchase Orders', value: metrics.receivedPurchaseOrders, detail: 'received', tone: 'teal' },
+    { label: 'Total Purchase Orders', value: dashboardData.purchaseOrders.length, detail: 'purchase orders', tone: 'teal', icon: 'clipboard' },
+    { label: 'Pending Purchase Orders', value: metrics.pendingPurchaseOrders, detail: 'awaiting action', tone: 'amber', icon: 'clock' },
+    { label: 'Received Purchase Orders', value: metrics.receivedPurchaseOrders, detail: 'received', tone: 'teal', icon: 'check' },
+  ];
+
+  const heroStats = [
+    { label: 'Products', value: dashboardData.products.length, tone: 'text-teal-300' },
+    { label: 'Units on hand', value: metrics.totalUnits, tone: 'text-white' },
+    { label: 'Low stock', value: metrics.lowStockCount, tone: 'text-amber-300' },
+    { label: 'Pending orders', value: metrics.pendingOrders, tone: 'text-rose-300' },
   ];
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-[10px] font-medium uppercase tracking-[0.26em] text-teal-700">
-            Operations Overview
-          </p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-stone-900">
-            Dashboard
-          </h1>
+      <section className="animate-rise relative overflow-hidden rounded-2xl border border-white/5 bg-[radial-gradient(130%_130%_at_0%_0%,#17322d_0%,#101a1c_48%,#0a1011_100%)] p-5 text-stone-100 shadow-[0_30px_70px_-52px_rgba(12,20,22,0.95)] sm:p-6">
+        <div className="pointer-events-none absolute -right-28 -top-28 h-72 w-72 rounded-full bg-teal-400/10 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 left-1/3 h-56 w-56 rounded-full bg-emerald-400/[0.07] blur-3xl" />
+
+        <div className="relative grid items-center gap-6 lg:grid-cols-[1.05fr_1fr]">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-teal-300/20 bg-teal-400/10 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.2em] text-teal-200">
+                <Icon name="spark" size={11} />
+                Live operations
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-[9px] uppercase tracking-[0.22em] text-stone-400">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-teal-400 opacity-70" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-teal-400" />
+                </span>
+                Synced with ERP
+              </span>
+            </div>
+
+            <h1 className="mt-3 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+              Inventory command center
+            </h1>
+            <p className="mt-2 max-w-xl text-sm leading-relaxed text-stone-400">
+              A live 3D snapshot of stock health across your catalog, with ML-driven demand
+              signals feeding the reorder queue.
+            </p>
+
+            <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {heroStats.map((stat) => (
+                <div
+                  key={stat.label}
+                  className="rounded-lg border border-white/[0.07] bg-white/[0.04] px-3 py-2 backdrop-blur-sm"
+                >
+                  <p className="text-[8px] font-semibold uppercase tracking-[0.18em] text-stone-400">
+                    {stat.label}
+                  </p>
+                  <p className={`mt-1 text-lg font-semibold leading-none tabular-nums ${stat.tone}`}>
+                    {loading || !data ? '—' : numberFormatter.format(stat.value)}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-5 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => loadDashboard(true)}
+                disabled={loading || refreshing}
+                className="inline-flex items-center gap-2 rounded-lg bg-teal-300 px-3.5 py-2 text-sm font-semibold text-[#06201d] shadow-[0_10px_30px_-14px_rgba(45,212,191,0.9)] transition hover:bg-teal-200 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Icon
+                  name="refresh"
+                  size={15}
+                  className={refreshing ? 'animate-spin' : ''}
+                />
+                {refreshing ? 'Refreshing…' : 'Refresh data'}
+              </button>
+              <Link
+                to="/forecasting"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-3.5 py-2 text-sm font-medium text-stone-200 transition hover:border-teal-300/50 hover:bg-white/[0.06] hover:text-white"
+              >
+                Open forecast
+                <Icon name="arrowRight" size={14} />
+              </Link>
+            </div>
+          </div>
+
+          <div className="relative h-56 sm:h-64 lg:h-72">
+            <Warehouse3D items={warehouseItems} />
+            <div className="pointer-events-none absolute inset-x-0 bottom-1 flex flex-wrap justify-center gap-3 text-[8px] uppercase tracking-[0.18em] text-stone-400">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-[2px] bg-teal-400" /> In stock
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-[2px] bg-amber-400" /> Low
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-[2px] bg-rose-500" /> Out
+              </span>
+            </div>
+          </div>
         </div>
-        <button
-          type="button"
-          onClick={() => loadDashboard(true)}
-          disabled={loading || refreshing}
-          className="inline-flex items-center gap-2 rounded-md border border-stone-200 bg-[#fffdf9] px-3 py-2 text-sm font-medium text-stone-700 shadow-sm transition hover:border-teal-500 hover:text-teal-800 focus:outline-none focus:ring-2 focus:ring-teal-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          <span aria-hidden="true" className={refreshing ? 'animate-spin' : ''}>↻</span>
-          {refreshing ? 'Refreshing…' : 'Refresh'}
-        </button>
-      </div>
+      </section>
 
       {loading && (
         <p className="text-sm text-stone-600" role="status">
@@ -359,8 +483,8 @@ function Dashboard() {
       )}
 
       <section className="space-y-3">
-        <h2 className="text-[10px] font-semibold uppercase tracking-[0.24em] text-stone-500">Inventory</h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <SectionHeading icon="box" title="Inventory" />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
           {inventoryStats.map((stat) => (
             <StatCard key={stat.label} {...stat} loading={loading || !data} />
           ))}
@@ -369,13 +493,18 @@ function Dashboard() {
 
       <section className="overflow-hidden rounded-xl border border-stone-200 bg-[#fffdf9] shadow-sm">
         <div className="flex items-center justify-between gap-3 border-b border-stone-200 p-4">
-          <div>
-            <h2 className="text-lg font-semibold text-stone-900">Low-stock alerts</h2>
-            <p className="text-xs text-stone-500">
-              Products at or below their reorder level
-            </p>
+          <div className="flex items-center gap-3">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-50 text-amber-700 ring-1 ring-amber-100">
+              <Icon name="alert" size={16} />
+            </span>
+            <div>
+              <h2 className="text-base font-semibold text-stone-900">Low-stock alerts</h2>
+              <p className="text-xs text-stone-500">
+                Products at or below their reorder level
+              </p>
+            </div>
           </div>
-          <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-900">
+          <span className="rounded-full border border-amber-200/70 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-900 tabular-nums">
             {loading || !data ? '—' : numberFormatter.format(lowStockProducts.length)}
           </span>
         </div>
@@ -391,13 +520,13 @@ function Dashboard() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-stone-100 text-xs uppercase tracking-wide text-stone-600">
+              <thead className="bg-stone-50 text-[10px] uppercase tracking-[0.12em] text-stone-500">
                 <tr>
-                  <th className="px-4 py-3 font-medium">Status</th>
-                  <th className="px-4 py-3 font-medium">Product</th>
-                  <th className="px-4 py-3 font-medium">SKU</th>
-                  <th className="px-4 py-3 text-right font-medium">Current quantity</th>
-                  <th className="px-4 py-3 text-right font-medium">Reorder level</th>
+                  <th className="px-4 py-3 font-semibold">Status</th>
+                  <th className="px-4 py-3 font-semibold">Product</th>
+                  <th className="px-4 py-3 font-semibold">SKU</th>
+                  <th className="px-4 py-3 text-right font-semibold">Current quantity</th>
+                  <th className="px-4 py-3 text-right font-semibold">Reorder level</th>
                 </tr>
               </thead>
               <tbody>
@@ -405,24 +534,32 @@ function Dashboard() {
                   const quantity = getProductQuantity(product);
                   const outOfStock = quantity <= 0;
                   return (
-                    <tr key={product.id} className="border-t border-stone-200">
+                    <tr
+                      key={product.id}
+                      className="border-t border-stone-100 transition hover:bg-stone-50/70"
+                    >
                       <td className="px-4 py-3">
                         <span
-                          className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
+                          className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-medium ring-1 ${
                             outOfStock
-                              ? 'bg-red-50 text-red-800'
-                              : 'bg-amber-50 text-amber-900'
+                              ? 'bg-red-50 text-red-800 ring-red-100'
+                              : 'bg-amber-50 text-amber-900 ring-amber-100'
                           }`}
                         >
+                          <span
+                            className={`h-1.5 w-1.5 rounded-full ${
+                              outOfStock ? 'bg-red-500' : 'bg-amber-500'
+                            }`}
+                          />
                           {outOfStock ? 'Out of stock' : 'Low stock'}
                         </span>
                       </td>
                       <td className="px-4 py-3 font-medium text-stone-800">{product.name}</td>
-                      <td className="px-4 py-3 text-stone-600">{product.sku || '—'}</td>
-                      <td className="px-4 py-3 text-right tabular-nums">
+                      <td className="px-4 py-3 font-mono text-xs text-stone-500">{product.sku || '—'}</td>
+                      <td className="px-4 py-3 text-right font-medium tabular-nums">
                         {numberFormatter.format(quantity)}
                       </td>
-                      <td className="px-4 py-3 text-right tabular-nums">
+                      <td className="px-4 py-3 text-right tabular-nums text-stone-500">
                         {numberFormatter.format(getProductReorderLevel(product))}
                       </td>
                     </tr>
@@ -435,7 +572,7 @@ function Dashboard() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-[10px] font-semibold uppercase tracking-[0.24em] text-stone-500">Sales</h2>
+        <SectionHeading icon="cart" title="Sales" />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {salesStats.map((stat) => (
             <StatCard key={stat.label} {...stat} loading={loading || !data} />
@@ -444,7 +581,7 @@ function Dashboard() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-[10px] font-semibold uppercase tracking-[0.24em] text-stone-500">Procurement & Suppliers</h2>
+        <SectionHeading icon="truck" title="Procurement & Suppliers" />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {[
             ...procurementStats,
@@ -453,6 +590,7 @@ function Dashboard() {
               value: dashboardData.suppliers.length,
               detail: 'suppliers',
               tone: 'teal',
+              icon: 'users',
             },
           ].map((stat) => (
             <StatCard key={stat.label} {...stat} loading={loading || !data} />
@@ -463,11 +601,16 @@ function Dashboard() {
       <div className="grid gap-4 xl:grid-cols-[1.5fr_1fr]">
         <section className="rounded-xl border border-stone-200 bg-[#fffdf9] p-4 shadow-sm">
           <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-stone-900">Inventory Health</h2>
-              <p className="text-xs text-stone-500">Stock level by product count</p>
+            <div className="flex items-center gap-3">
+              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-50 text-teal-700 ring-1 ring-teal-100">
+                <Icon name="layers" size={16} />
+              </span>
+              <div>
+                <h2 className="text-base font-semibold text-stone-900">Inventory Health</h2>
+                <p className="text-xs text-stone-500">Stock level by product count</p>
+              </div>
             </div>
-            <span className="rounded-full bg-teal-50 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.2em] text-teal-700">
+            <span className="rounded-full border border-teal-200/70 bg-teal-50 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.2em] text-teal-700">
               Live data
             </span>
           </div>
@@ -475,18 +618,31 @@ function Dashboard() {
           <div className="mt-5 space-y-4">
             {inventoryHealth.map((item) => (
               <div key={item.label}>
-                <div className="mb-1 flex items-center justify-between text-sm">
-                  <span className="font-medium text-stone-700">{item.label}</span>
-                  <span className="text-stone-500">{loading || !data ? '—' : item.value}</span>
+                <div className="mb-1.5 flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-2 font-medium text-stone-700">
+                    <span
+                      className={`h-2 w-2 rounded-full ${
+                        item.tone === 'teal'
+                          ? 'bg-teal-500'
+                          : item.tone === 'amber'
+                            ? 'bg-amber-400'
+                            : 'bg-red-500'
+                      }`}
+                    />
+                    {item.label}
+                  </span>
+                  <span className="font-semibold tabular-nums text-stone-600">
+                    {loading || !data ? '—' : item.value}
+                  </span>
                 </div>
-                <div className="h-2.5 w-full overflow-hidden rounded-full bg-stone-200">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-stone-200/80">
                   <div
-                    className={`h-full rounded-full ${
+                    className={`h-full rounded-full transition-[width] duration-700 ease-out ${
                       item.tone === 'teal'
-                        ? 'bg-teal-500'
+                        ? 'bg-gradient-to-r from-teal-400 to-emerald-500'
                         : item.tone === 'amber'
-                          ? 'bg-amber-400'
-                          : 'bg-red-500'
+                          ? 'bg-gradient-to-r from-amber-300 to-orange-400'
+                          : 'bg-gradient-to-r from-rose-400 to-red-500'
                     }`}
                     style={{ width: loading || !data ? '0%' : item.value }}
                   />
@@ -504,22 +660,38 @@ function Dashboard() {
         </section>
 
         <section className="rounded-xl border border-stone-200 bg-[#fffdf9] p-4 shadow-sm">
-          <h2 className="text-lg font-semibold text-stone-900">Attention Required</h2>
-          <div className="mt-4 space-y-3">
+          <div className="flex items-center gap-3">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-rose-50 text-rose-600 ring-1 ring-rose-100">
+              <Icon name="alert" size={16} />
+            </span>
+            <div>
+              <h2 className="text-base font-semibold text-stone-900">Attention Required</h2>
+              <p className="text-xs text-stone-500">Items that need an operator decision</p>
+            </div>
+          </div>
+          <div className="mt-4 space-y-2.5">
             {attentionSummaries.map((alert) => (
               <div
                 key={alert.title}
-                className={`rounded-md border-l-4 bg-stone-50 p-3 ${
-                  alert.tone === 'amber' ? 'border-amber-400' : 'border-red-500'
+                className={`rounded-lg border p-3 ${
+                  alert.tone === 'amber'
+                    ? 'border-amber-200/70 bg-amber-50/60'
+                    : 'border-rose-200/70 bg-rose-50/60'
                 }`}
               >
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm font-medium text-stone-800">{alert.title}</p>
-                  <span className={`text-xs font-semibold tabular-nums ${alert.tone === 'amber' ? 'text-amber-800' : 'text-red-800'}`}>
+                  <span
+                    className={`rounded-full bg-white/70 px-2 py-0.5 text-xs font-semibold tabular-nums ring-1 ${
+                      alert.tone === 'amber'
+                        ? 'text-amber-800 ring-amber-200/70'
+                        : 'text-rose-800 ring-rose-200/70'
+                    }`}
+                  >
                     {loading || !data ? '—' : numberFormatter.format(alert.records.length)}
                   </span>
                 </div>
-                <p className="mt-1 text-xs text-stone-600">
+                <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-stone-600">
                   {loading
                     ? 'Loading…'
                     : !data
@@ -533,15 +705,29 @@ function Dashboard() {
       </div>
 
       <section className="rounded-xl border border-stone-200 bg-[#fffdf9] p-4 shadow-sm">
-        <h2 className="text-lg font-semibold text-stone-900">Quick Actions</h2>
+        <div className="flex items-center gap-3">
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-stone-100 text-stone-700 ring-1 ring-stone-200">
+            <Icon name="spark" size={16} />
+          </span>
+          <div>
+            <h2 className="text-base font-semibold text-stone-900">Quick Actions</h2>
+            <p className="text-xs text-stone-500">Jump straight into the most common tasks</p>
+          </div>
+        </div>
         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
           {quickActions.map((action) => (
             <Link
               key={action.label}
               to={action.path}
-              className="rounded-md border border-stone-200 bg-stone-50 px-3 py-2 text-sm font-medium text-stone-700 hover:border-teal-300 hover:bg-teal-50 hover:text-teal-700"
+              className="group flex items-center gap-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2.5 text-sm font-medium text-stone-700 transition hover:border-teal-300 hover:bg-teal-50 hover:text-teal-800"
             >
-              {action.label}
+              <span className="text-stone-400 transition group-hover:text-teal-600">
+                <Icon name={action.icon} size={15} />
+              </span>
+              <span className="flex-1 truncate">{action.label}</span>
+              <span className="text-stone-300 transition group-hover:translate-x-0.5 group-hover:text-teal-600">
+                <Icon name="arrowRight" size={13} />
+              </span>
             </Link>
           ))}
         </div>
@@ -549,11 +735,18 @@ function Dashboard() {
 
       <section className="rounded-xl border border-stone-200 bg-[#fffdf9] p-4 shadow-sm">
         <div className="flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold text-stone-900">Recent Activity</h2>
-            <p className="text-xs text-stone-500">Latest sales and purchase orders by ID</p>
+          <div className="flex items-center gap-3">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-stone-100 text-stone-700 ring-1 ring-stone-200">
+              <Icon name="clock" size={16} />
+            </span>
+            <div>
+              <h2 className="text-base font-semibold text-stone-900">Recent Activity</h2>
+              <p className="text-xs text-stone-500">Latest sales and purchase orders by ID</p>
+            </div>
           </div>
-          <span className="text-[10px] uppercase tracking-[0.2em] text-stone-500">Live data</span>
+          <span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-stone-400">
+            Live data
+          </span>
         </div>
 
         {!data ? (
@@ -567,13 +760,22 @@ function Dashboard() {
               {recentSalesOrders.length ? (
                 <div className="space-y-3">
                   {recentSalesOrders.map((order) => (
-                    <div key={order.id} className="flex items-start gap-3">
-                      <span className="mt-1 h-2.5 w-2.5 rounded-full bg-teal-500" />
-                      <div className="flex-1 border-b border-stone-200 pb-2 last:border-b-0 last:pb-0">
-                        <p className="text-sm font-medium text-stone-700">
-                          Order #{order.id} · {order.customer_name}
-                        </p>
-                        <p className="text-xs text-stone-500">{order.status}</p>
+                    <div
+                      key={order.id}
+                      className="flex items-start gap-3 rounded-lg px-1 py-1.5 transition hover:bg-stone-50"
+                    >
+                      <span className="mt-1 flex h-6 w-6 items-center justify-center rounded-md bg-teal-50 text-teal-600 ring-1 ring-teal-100">
+                        <Icon name="cart" size={12} />
+                      </span>
+                      <div className="flex-1 border-b border-stone-100 pb-2 last:border-b-0 last:pb-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="truncate text-sm font-medium text-stone-700">
+                            Order #{order.id} · {order.customer_name}
+                          </p>
+                          <span className="shrink-0 rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-medium text-stone-600">
+                            {order.status}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -588,13 +790,22 @@ function Dashboard() {
               {recentPurchaseOrders.length ? (
                 <div className="space-y-3">
                   {recentPurchaseOrders.map((order) => (
-                    <div key={order.id} className="flex items-start gap-3">
-                      <span className="mt-1 h-2.5 w-2.5 rounded-full bg-amber-400" />
-                      <div className="flex-1 border-b border-stone-200 pb-2 last:border-b-0 last:pb-0">
-                        <p className="text-sm font-medium text-stone-700">
-                          Purchase order #{order.id} · Supplier {order.supplier_id}
-                        </p>
-                        <p className="text-xs text-stone-500">{order.status}</p>
+                    <div
+                      key={order.id}
+                      className="flex items-start gap-3 rounded-lg px-1 py-1.5 transition hover:bg-stone-50"
+                    >
+                      <span className="mt-1 flex h-6 w-6 items-center justify-center rounded-md bg-amber-50 text-amber-600 ring-1 ring-amber-100">
+                        <Icon name="clipboard" size={12} />
+                      </span>
+                      <div className="flex-1 border-b border-stone-100 pb-2 last:border-b-0 last:pb-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="truncate text-sm font-medium text-stone-700">
+                            Purchase order #{order.id} · Supplier {order.supplier_id}
+                          </p>
+                          <span className="shrink-0 rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-medium text-stone-600">
+                            {order.status}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   ))}

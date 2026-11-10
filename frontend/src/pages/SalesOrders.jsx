@@ -679,10 +679,10 @@ export default function SalesOrders() {
               className="w-full rounded-md border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-900 shadow-sm outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-100 disabled:cursor-not-allowed disabled:bg-stone-100"
             >
               {[selectedStatusOrder?.status, ...(ORDER_STATUS_TRANSITIONS[selectedStatusOrder?.status] ?? ORDER_STATUSES)]
-                .filter((status, index, statuses) => statuses.indexOf(status) === index)
+                .filter((status, index, statuses) => Boolean(status) && statuses.indexOf(status) === index)
                 .map((status) => (
-                <option key={status} value={status}>{status}</option>
-              ))}
+                  <option key={status} value={status}>{status}</option>
+                ))}
             </select>
           </div>
 

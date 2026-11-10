@@ -4,6 +4,14 @@ import { defineConfig } from 'vite'
 const apiTarget = process.env.API_PROXY_TARGET ?? 'http://127.0.0.1:8000'
 const apiPaths = '^/(auth|products|categories|suppliers|orders|purchase-orders|inventory-transactions|health|ml)(/.*)?$'
 
+// SPA routes share names with API paths (e.g. /products, /suppliers). A full page
+// load or refresh must return index.html, while fetch/XHR calls go to the API.
+function isDocumentNavigation(request) {
+  if (request.method !== 'GET' && request.method !== 'HEAD') return false
+  const accept = request.headers.accept ?? ''
+  return accept.includes('text/html')
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
@@ -12,6 +20,9 @@ export default defineConfig({
       [apiPaths]: {
         target: apiTarget,
         changeOrigin: true,
+        bypass(request) {
+          return isDocumentNavigation(request) ? '/index.html' : undefined
+        },
       },
     },
   },

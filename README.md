@@ -4,7 +4,7 @@ NextGenERP is an inventory and procurement ERP application for managing product 
 
 ## Current functionality
 
-- **Dashboard:** live catalog/order summaries, low-stock and out-of-stock attention lists, pending-order summaries, and shortcuts to operational screens. These are operational metrics, not forecasts.
+- **Dashboard:** live catalog/order summaries, an interactive 3D stock snapshot, low-stock and out-of-stock attention lists, pending-order summaries, and shortcuts to operational screens. These are operational metrics, not forecasts.
 - **Authentication:** account registration and sign-in with 30-minute JWT bearer tokens. Passwords are hashed with Argon2id. Tokens are held in browser session storage. All registered accounts currently have equal permissions; there is no default administrator or role-based access control.
 - **Catalog:** create, view, update, and delete products, categories, and suppliers, subject to existing relationship protections.
 - **Sales orders:** create and view sales orders, update customer details, and progress orders through `Pending → Confirmed → Shipped → Delivered`. Pending or confirmed orders can be cancelled; cancellation restores stock. Sales order history cannot be deleted.
@@ -16,7 +16,7 @@ NextGenERP is an inventory and procurement ERP application for managing product 
 ### Not included / pending
 
 - The ML model is trained on the demo dataset (three products) and is not retrained automatically from ERP sales history; see the [ML integration guide](./docs/ml-integration.md) for details.
-- The dashboard search field and notification control are presentation-only; they do not currently perform search or deliver notifications.
+- The dashboard search field is a module jump shortcut; it does not search records.
 - User roles, account administration, password reset, and login rate limiting are not implemented.
 - Database schema creation uses SQLAlchemy `create_all`; a versioned migration system is not configured.
 
@@ -24,7 +24,7 @@ NextGenERP is an inventory and procurement ERP application for managing product 
 
 | Layer | Technology |
 | --- | --- |
-| Frontend | React 19, React Router, Vite, Tailwind CSS |
+| Frontend | React 19, React Router, Vite, Tailwind CSS, Three.js (3D visuals) |
 | Backend/API | Python 3.13, FastAPI, Pydantic, SQLAlchemy |
 | ML forecasting | XGBoost, pandas, NumPy, scikit-learn, Open-Meteo weather API |
 | Authentication | PyJWT bearer tokens, Argon2id password hashing |

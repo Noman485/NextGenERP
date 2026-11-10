@@ -3,15 +3,17 @@
 @tailwind utilities;
 
 :root {
-  font-family: Inter, 'Segoe UI', sans-serif;
+  font-family: 'Inter', 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system,
+    'Helvetica Neue', Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color: #1f2937;
-  background-color: #f3efe8;
+  color: #1c1917;
+  background-color: #f4f0e9;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  color-scheme: light;
 }
 
 * {
@@ -19,14 +21,19 @@
 }
 
 html {
-  background: #f3efe8;
+  background: #f4f0e9;
+  scroll-behavior: smooth;
 }
 
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: #f3efe8;
+  background:
+    radial-gradient(1100px 520px at 8% -8%, rgba(45, 212, 191, 0.13), transparent 60%),
+    radial-gradient(900px 480px at 100% 0%, rgba(251, 191, 36, 0.1), transparent 55%),
+    #f4f0e9;
+  background-attachment: fixed;
 }
 
 #root {
@@ -35,10 +42,103 @@ body {
 
 button,
 input,
-a {
-  transition: all 0.2s ease;
+a,
+select,
+textarea {
+  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease,
+    box-shadow 0.18s ease, transform 0.18s ease;
 }
 
 input::placeholder {
   color: #a8a29e;
+}
+
+::selection {
+  background: rgba(45, 212, 191, 0.28);
+  color: #0f172a;
+}
+
+:focus-visible {
+  outline: 2px solid rgba(13, 148, 136, 0.75);
+  outline-offset: 2px;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(120, 113, 108, 0.35) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: rgba(120, 113, 108, 0.32);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(120, 113, 108, 0.5);
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes glow-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+.animate-rise {
+  animation: rise-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Graceful message when WebGL is unavailable. */
+[data-webgl='unsupported']::after {
+  content: '3D preview unavailable on this device';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(153, 246, 228, 0.55);
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }

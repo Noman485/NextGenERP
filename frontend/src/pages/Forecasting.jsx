@@ -58,11 +58,11 @@ export default function Forecasting() {
       const response = await apiFetch('/ml/insights');
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(payload.detail || `Failed to load ML insights (HTTP ${response.status}).`);
+        throw new Error(payload.detail || `Failed to load forecast data (HTTP ${response.status}).`);
       }
       setData(payload);
     } catch (err) {
-      setError(err.message || 'Failed to load ML insights.');
+      setError(err.message || 'Failed to load forecast data.');
     } finally {
       setLoading(false);
     }
@@ -125,16 +125,16 @@ export default function Forecasting() {
         <div className="relative grid items-center gap-6 lg:grid-cols-[0.95fr_1.05fr]">
           <div>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-teal-300/20 bg-teal-400/10 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.2em] text-teal-200">
-              <Icon name="chip" size={11} />
-              ML module · XGBoost
+              <Icon name="forecast" size={11} />
+              Demand planning
             </span>
 
             <h1 className="mt-3 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
               Demand forecast &amp; reorder
             </h1>
             <p className="mt-2 max-w-xl text-sm leading-relaxed text-stone-400">
-              A 7-day demand forecast with smart reorder recommendations, driven by lag,
-              rolling, calendar and weather features.
+              A 7-day demand forecast with suggested reorders based on recent sales,
+              seasonality and weather.
             </p>
 
             <div className="mt-4 flex flex-wrap gap-2 text-[10px]">
@@ -160,7 +160,7 @@ export default function Forecasting() {
                 className="inline-flex items-center gap-2 rounded-lg bg-teal-300 px-3.5 py-2 text-sm font-semibold text-[#06201d] shadow-[0_10px_30px_-14px_rgba(45,212,191,0.9)] transition hover:bg-teal-200 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <Icon name="refresh" size={15} className={loading ? 'animate-spin' : ''} />
-                {loading ? 'Refreshing…' : 'Refresh insights'}
+                {loading ? 'Refreshing…' : 'Refresh forecast'}
               </button>
               <span className="text-[10px] uppercase tracking-[0.18em] text-stone-500">
                 Hover the bars for daily detail
@@ -235,9 +235,9 @@ export default function Forecasting() {
               <Icon name="cart" size={16} />
             </span>
             <div>
-              <h2 className="text-base font-semibold text-stone-900">Smart reorder recommendations</h2>
+              <h2 className="text-base font-semibold text-stone-900">Suggested reorders</h2>
               <p className="text-xs text-stone-500">
-                Forecasted demand + lead time + safety stock vs current inventory
+                Forecasted demand, lead time and safety stock compared with current inventory
               </p>
             </div>
           </div>

@@ -23,6 +23,7 @@ from routes.purchase_orders import router as purchase_order_router
 from routes.inventory_transactions import router as inventory_transaction_router
 from routes.auth import router as auth_router
 from routes.ml import router as ml_router
+from routes.assistant import router as assistant_router
 
 logger = logging.getLogger(__name__)
 app = FastAPI()
@@ -74,6 +75,7 @@ app.include_router(order_router)
 app.include_router(purchase_order_router)
 app.include_router(inventory_transaction_router)
 app.include_router(ml_router)
+app.include_router(assistant_router)
 
 @app.get("/")
 def home():

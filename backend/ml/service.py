@@ -4,8 +4,9 @@ from .predict import generate_forecast
 from .reorder import generate_reorder_recommendations
 
 
-def get_ml_results(inventory=None):
-    forecast_df = generate_forecast()
+def get_ml_results(inventory=None, forecast_df=None):
+    if forecast_df is None:
+        forecast_df = generate_forecast()
 
     weather_source = forecast_df.attrs.get("weather_source", "Unknown")
     recommendations = generate_reorder_recommendations(forecast_df, inventory=inventory)

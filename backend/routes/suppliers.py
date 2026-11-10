@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from auth.dependencies import get_current_user
@@ -33,7 +33,14 @@ def create_supplier(supplier_data: SupplierCreate, db: Session = Depends(get_db)
     )
 
     db.add(new_supplier)
-    db.commit()
+    try:
+        db.commit()
+    except SQLAlchemyError as error:
+        db.rollback()
+        raise HTTPException(
+            status_code=503,
+            detail="Unable to save supplier",
+        ) from error
     db.refresh(new_supplier)
     return new_supplier
 
@@ -71,7 +78,14 @@ def update_supplier(
     supplier.lead_time_days = supplier_data.lead_time_days
     supplier.performance_rating = supplier_data.performance_rating
 
-    db.commit()
+    try:
+        db.commit()
+    except SQLAlchemyError as error:
+        db.rollback()
+        raise HTTPException(
+            status_code=503,
+            detail="Unable to save supplier",
+        ) from error
     db.refresh(supplier)
     return supplier
 
@@ -102,5 +116,11 @@ def delete_supplier(supplier_id: int, db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=409,
             detail="Supplier cannot be deleted while purchase orders reference it",
+        ) from error
+    except SQLAlchemyError as error:
+        db.rollback()
+        raise HTTPException(
+            status_code=503,
+            detail="Unable to delete supplier",
         ) from error
     return {"message": "Supplier deleted successfully"}

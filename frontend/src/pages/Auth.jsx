@@ -4,9 +4,9 @@ import { Icon } from '../components/Icons';
 import Warehouse3D from '../components/Warehouse3D';
 
 const FEATURES = [
-  { icon: 'forecast', title: '7-day demand forecast', detail: 'XGBoost model · 8.42% WAPE' },
-  { icon: 'cart', title: 'Smart reorder queue', detail: 'Safety stock + lead time aware' },
-  { icon: 'inventory', title: 'Live inventory ops', detail: 'Stock in / out with full audit trail' },
+  { icon: 'forecast', title: '7-day demand forecast', detail: 'Daily demand estimates for planning' },
+  { icon: 'cart', title: 'Suggested reorders', detail: 'Based on stock, lead time and demand' },
+  { icon: 'inventory', title: 'Inventory operations', detail: 'Stock in and out with a full audit trail' },
 ];
 
 export default function Auth({ onAuthenticated }) {
@@ -41,7 +41,7 @@ export default function Auth({ onAuthenticated }) {
       if (!data.access_token) {
         throw new Error('The authentication service did not return an access token.');
       }
-      onAuthenticated(data.access_token);
+      onAuthenticated(data.access_token, data.user);
     } catch (requestError) {
       setError(
         requestError instanceof TypeError
@@ -76,8 +76,8 @@ export default function Auth({ onAuthenticated }) {
             Inventory decisions, backed by live data and demand forecasts.
           </h1>
           <p className="mt-3 max-w-sm text-sm leading-relaxed text-stone-400">
-            One workspace for catalog, stock movement, orders and ML-driven reorder
-            recommendations.
+            One workspace for catalog, stock movement, orders and reorder
+            suggestions based on live inventory and demand.
           </p>
 
           <ul className="mt-8 space-y-3">
@@ -210,7 +210,7 @@ export default function Auth({ onAuthenticated }) {
           </div>
 
           <p className="mt-4 text-center text-[10px] uppercase tracking-[0.18em] text-stone-400">
-            Secured with JWT · Session stored per tab
+            Secure sign-in · Session stored per tab
           </p>
         </div>
       </section>

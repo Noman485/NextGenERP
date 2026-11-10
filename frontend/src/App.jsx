@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 
 import Dashboard from './pages/Dashboard';
 import Auth from './pages/Auth';
@@ -11,27 +11,45 @@ import PurchaseOrders from './pages/PurchaseOrders';
 import InventoryTransactions from './pages/InventoryTransactions';
 import Forecasting from './pages/Forecasting';
 import { Icon } from './components/Icons';
+import ErrorBoundary from './components/ErrorBoundary';
+import Assistant from './components/Assistant';
+import { apiFetch } from './api';
 
 const navigation = [
-  { name: 'Dashboard', path: '/', icon: 'dashboard' },
-  { name: 'Forecasting', path: '/forecasting', icon: 'forecast' },
-  { name: 'Products', path: '/products', icon: 'box' },
-  { name: 'Inventory Operations', path: '/inventory-operations', icon: 'inventory' },
-  { name: 'Categories', path: '/categories', icon: 'tag' },
-  { name: 'Suppliers', path: '/suppliers', icon: 'truck' },
-  { name: 'Sales Orders', path: '/sales-orders', icon: 'cart' },
-  { name: 'Purchase Orders', path: '/purchase-orders', icon: 'clipboard' },
+  { name: 'Dashboard', path: '/', icon: 'dashboard', keywords: ['home', 'overview'] },
+  {
+    name: 'Demand Forecast',
+    path: '/forecasting',
+    icon: 'forecast',
+    keywords: ['forecast', 'demand', 'reorder', 'planning'],
+  },
+  { name: 'Products', path: '/products', icon: 'box', keywords: ['catalog', 'items', 'sku'] },
+  {
+    name: 'Inventory Operations',
+    path: '/inventory-operations',
+    icon: 'inventory',
+    keywords: ['stock', 'inventory', 'movement', 'adjustment'],
+  },
+  { name: 'Categories', path: '/categories', icon: 'tag', keywords: ['catalog', 'groups'] },
+  { name: 'Suppliers', path: '/suppliers', icon: 'truck', keywords: ['vendors', 'procurement'] },
+  { name: 'Sales Orders', path: '/sales-orders', icon: 'cart', keywords: ['orders', 'customers'] },
+  {
+    name: 'Purchase Orders',
+    path: '/purchase-orders',
+    icon: 'clipboard',
+    keywords: ['procurement', 'suppliers', 'purchasing'],
+  },
 ];
 
 const PAGE_META = {
   '/': { title: 'Dashboard', eyebrow: 'Operations overview' },
-  '/forecasting': { title: 'Demand forecasting', eyebrow: 'ML module' },
+  '/forecasting': { title: 'Demand Forecast', eyebrow: 'Planning' },
   '/products': { title: 'Products', eyebrow: 'Catalog' },
-  '/inventory-operations': { title: 'Inventory operations', eyebrow: 'Stock movement' },
+  '/inventory-operations': { title: 'Inventory Operations', eyebrow: 'Stock movement' },
   '/categories': { title: 'Categories', eyebrow: 'Catalog' },
   '/suppliers': { title: 'Suppliers', eyebrow: 'Procurement' },
-  '/sales-orders': { title: 'Sales orders', eyebrow: 'Fulfilment' },
-  '/purchase-orders': { title: 'Purchase orders', eyebrow: 'Procurement' },
+  '/sales-orders': { title: 'Sales Orders', eyebrow: 'Fulfilment' },
+  '/purchase-orders': { title: 'Purchase Orders', eyebrow: 'Procurement' },
 };
 
 const todayLabel = new Intl.DateTimeFormat('en-IN', {
@@ -40,10 +58,41 @@ const todayLabel = new Intl.DateTimeFormat('en-IN', {
   year: 'numeric',
 }).format(new Date());
 
+function getInitials(name) {
+  const cleaned = (name || '').trim();
+  return cleaned ? cleaned.slice(0, 2).toUpperCase() : '?';
+}
+
+function NotFound() {
+  return (
+    <div className="mx-auto max-w-xl rounded-xl border border-stone-200 bg-[#fffdf9] p-6 text-center shadow-sm">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-teal-700">
+        404
+      </p>
+      <h2 className="mt-2 text-xl font-semibold tracking-tight text-stone-900">
+        Page not found
+      </h2>
+      <p className="mt-2 text-sm leading-relaxed text-stone-600">
+        The page you requested does not exist or has moved. Use the sidebar or
+        return to the dashboard.
+      </p>
+      <Link
+        to="/"
+        className="mt-5 inline-flex items-center gap-1.5 rounded-lg bg-stone-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-stone-800"
+      >
+        Back to dashboard
+        <Icon name="arrowRight" size={14} />
+      </Link>
+    </div>
+  );
+}
+
 function App() {
   const [token, setToken] = useState(() => sessionStorage.getItem('access_token'));
+  const [user, setUser] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [searchFeedback, setSearchFeedback] = useState('');
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -60,13 +109,39 @@ function App() {
     setSidebarOpen(false);
   }, [location.pathname]);
 
-  function handleAuthenticated(accessToken) {
+  useEffect(() => {
+    if (!token) {
+      setUser(null);
+      return undefined;
+    }
+
+    let active = true;
+    apiFetch('/auth/me')
+      .then(async (response) => {
+        if (!response.ok) return null;
+        return response.json();
+      })
+      .then((profile) => {
+        if (active && profile) setUser(profile);
+      })
+      .catch(() => {
+        if (active) setUser(null);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [token]);
+
+  function handleAuthenticated(accessToken, authenticatedUser) {
     sessionStorage.setItem('access_token', accessToken);
+    setUser(authenticatedUser ?? null);
     setToken(accessToken);
   }
 
   function handleLogout() {
     sessionStorage.removeItem('access_token');
+    setUser(null);
     setToken(null);
   }
 
@@ -75,17 +150,30 @@ function App() {
     const term = query.trim().toLowerCase();
     if (!term) return;
 
-    const match = navigation.find((item) => item.name.toLowerCase().includes(term));
+    const match = navigation.find(
+      (item) =>
+        item.name.toLowerCase().includes(term) ||
+        item.keywords.some((keyword) => keyword.includes(term)),
+    );
+
     if (match) {
       navigate(match.path);
       setQuery('');
+      setSearchFeedback('');
+      return;
     }
+
+    setSearchFeedback(
+      `No module matches "${query.trim()}". Try Products, Sales Orders or Suppliers.`,
+    );
   }
 
   const meta = useMemo(
     () => PAGE_META[location.pathname] ?? { title: 'NextGenERP', eyebrow: 'Workspace' },
     [location.pathname],
   );
+  const displayName = user?.username || 'Signed in';
+  const initials = getInitials(user?.username);
 
   if (!token) {
     return <Auth onAuthenticated={handleAuthenticated} />;
@@ -93,6 +181,13 @@ function App() {
 
   return (
     <div className="min-h-screen bg-[#f4f0e9] text-stone-800">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-stone-900 focus:shadow-lg"
+      >
+        Skip to main content
+      </a>
+
       <div className="flex min-h-screen">
         {sidebarOpen && (
           <button
@@ -163,25 +258,32 @@ function App() {
           </nav>
 
           <div className="space-y-3 border-t border-white/5 p-3">
-            <div className="rounded-xl border border-teal-400/15 bg-teal-400/[0.06] p-3">
+            <Link
+              to="/forecasting"
+              className="block rounded-xl border border-teal-400/15 bg-teal-400/[0.06] p-3 transition hover:border-teal-300/30 hover:bg-teal-400/[0.09]"
+            >
               <div className="flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.2em] text-teal-300/80">
                 <span className="relative flex h-2 w-2">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-teal-400 opacity-60" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-teal-400" />
                 </span>
-                Forecast engine
+                Demand forecast
               </div>
-              <p className="mt-2 text-sm font-semibold text-white">XGBoost · WAPE 8.42%</p>
-              <p className="text-[11px] leading-snug text-stone-400">7-day demand model online</p>
-            </div>
+              <p className="mt-2 text-sm font-semibold text-white">7-day outlook</p>
+              <p className="text-[11px] leading-snug text-stone-400">
+                Open planning and suggested reorders
+              </p>
+            </Link>
 
             <div className="flex items-center gap-3 rounded-xl bg-white/[0.03] px-3 py-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-teal-400/15 text-[11px] font-semibold text-teal-200">
-                AS
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-teal-400/15 text-[11px] font-semibold uppercase text-teal-200">
+                {initials}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-medium text-stone-200">Ops Admin</p>
-                <p className="truncate text-[10px] text-stone-500">Inventory command center</p>
+                <p className="truncate text-xs font-medium text-stone-200" title={displayName}>
+                  {displayName}
+                </p>
+                <p className="truncate text-[10px] text-stone-500">Inventory workspace</p>
               </div>
               <button
                 type="button"
@@ -217,51 +319,72 @@ function App() {
                 </h1>
               </div>
 
-              <form
-                onSubmit={handleSearch}
-                className="ml-auto hidden items-center gap-2 rounded-lg border border-stone-200 bg-[#fffdf9] px-3 py-2 shadow-sm transition focus-within:border-teal-400 focus-within:ring-2 focus-within:ring-teal-500/15 sm:flex"
-                role="search"
-              >
-                <Icon name="search" size={15} className="text-stone-400" />
-                <input
-                  type="text"
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Jump to module…"
-                  aria-label="Jump to module"
-                  className="w-36 bg-transparent text-sm text-stone-700 outline-none placeholder:text-stone-400"
-                />
-                <kbd className="rounded border border-stone-200 bg-stone-50 px-1.5 py-0.5 text-[9px] font-medium text-stone-500">
-                  Enter
-                </kbd>
-              </form>
+              <div className="relative ml-auto hidden sm:block">
+                <form
+                  onSubmit={handleSearch}
+                  className="flex items-center gap-2 rounded-lg border border-stone-200 bg-[#fffdf9] px-3 py-2 shadow-sm transition focus-within:border-teal-400 focus-within:ring-2 focus-within:ring-teal-500/15"
+                  role="search"
+                >
+                  <Icon name="search" size={15} className="text-stone-400" />
+                  <input
+                    type="text"
+                    value={query}
+                    onChange={(event) => {
+                      setQuery(event.target.value);
+                      setSearchFeedback('');
+                    }}
+                    placeholder="Jump to module..."
+                    aria-label="Jump to module"
+                    className="w-36 bg-transparent text-sm text-stone-700 outline-none placeholder:text-stone-400"
+                  />
+                  <kbd className="rounded border border-stone-200 bg-stone-50 px-1.5 py-0.5 text-[9px] font-medium text-stone-500">
+                    Enter
+                  </kbd>
+                </form>
+                {searchFeedback && (
+                  <p
+                    role="status"
+                    className="absolute right-0 top-full z-30 mt-2 w-64 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900 shadow-lg"
+                  >
+                    {searchFeedback}
+                  </p>
+                )}
+              </div>
 
               <div className="ml-auto flex items-center gap-2 sm:ml-0">
                 <span className="hidden items-center gap-2 rounded-lg border border-stone-200 bg-[#fffdf9] px-3 py-2 text-xs text-stone-500 md:inline-flex">
                   <Icon name="clock" size={14} className="text-teal-600" />
                   {todayLabel}
                 </span>
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-teal-200 to-emerald-300 text-[11px] font-bold text-teal-900 ring-2 ring-white">
-                  AS
+                <div
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-teal-200 to-emerald-300 text-[11px] font-bold uppercase text-teal-900 ring-2 ring-white"
+                  title={displayName}
+                >
+                  {initials}
                 </div>
               </div>
             </div>
           </header>
 
-          <main className="flex-1 px-4 py-5 sm:px-6 sm:py-6">
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/forecasting" element={<Forecasting />} />
-              <Route path="/products" element={<Products />} />
-              <Route path="/categories" element={<Categories />} />
-              <Route path="/suppliers" element={<Suppliers />} />
-              <Route path="/sales-orders" element={<SalesOrders />} />
-              <Route path="/purchase-orders" element={<PurchaseOrders />} />
-              <Route path="/inventory-operations" element={<InventoryTransactions />} />
-            </Routes>
+          <main id="main-content" className="flex-1 px-4 py-5 sm:px-6 sm:py-6">
+            <ErrorBoundary resetKey={location.pathname}>
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/forecasting" element={<Forecasting />} />
+                <Route path="/products" element={<Products />} />
+                <Route path="/categories" element={<Categories />} />
+                <Route path="/suppliers" element={<Suppliers />} />
+                <Route path="/sales-orders" element={<SalesOrders />} />
+                <Route path="/purchase-orders" element={<PurchaseOrders />} />
+                <Route path="/inventory-operations" element={<InventoryTransactions />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </ErrorBoundary>
           </main>
         </div>
       </div>
+
+      <Assistant />
     </div>
   );
 }

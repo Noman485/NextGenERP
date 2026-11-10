@@ -35,6 +35,7 @@ def create_order(order_data: OrderCreate, db: Session = Depends(get_db)):
     customer_name = order_data.customer_name.strip()
     if not customer_name:
         raise HTTPException(status_code=400, detail="Customer name is required")
+    customer_email = (order_data.customer_email or "").strip() or None
 
     product = (
         db.query(Product)
@@ -59,7 +60,7 @@ def create_order(order_data: OrderCreate, db: Session = Depends(get_db)):
 
     new_order = Order(
         customer_name=customer_name,
-        customer_email=order_data.customer_email,
+        customer_email=customer_email,
         product_id=order_data.product_id,
         quantity=order_data.quantity,
         total_amount=total_amount,
@@ -110,10 +111,18 @@ def update_order(
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    order.customer_name = order_data.customer_name
-    order.customer_email = order_data.customer_email
+    customer_name = order_data.customer_name.strip()
+    if not customer_name:
+        raise HTTPException(status_code=400, detail="Customer name is required")
 
-    db.commit()
+    order.customer_name = customer_name
+    order.customer_email = (order_data.customer_email or "").strip() or None
+
+    try:
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        raise
     db.refresh(order)
     return order
 

@@ -174,6 +174,12 @@ const ICON_PATHS = {
       <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
     </>
   ),
+  send: (
+    <>
+      <path d="M21 3 10.5 13.5" />
+      <path d="M21 3l-6.5 18-4-7.5L3 9.5 21 3Z" />
+    </>
+  ),
 };
 
 export function Icon({ name, size = 18, className = '', title, strokeWidth = 1.6 }) {

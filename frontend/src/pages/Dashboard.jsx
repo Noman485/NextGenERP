@@ -45,17 +45,22 @@ async function requestDashboardData() {
   const results = await Promise.allSettled(
     API_ENDPOINTS.map((endpoint) => requestCollection(endpoint)),
   );
-  const failures = results
-    .filter((result) => result.status === 'rejected')
-    .map((result) => result.reason.message);
+  const data = {};
+  const errors = {};
 
-  if (failures.length > 0) {
-    throw new Error(`Unable to load dashboard data: ${failures.join(' ')}`);
-  }
+  results.forEach((result, index) => {
+    const endpoint = API_ENDPOINTS[index];
+    if (result.status === 'fulfilled') {
+      data[endpoint.key] = result.value;
+    } else {
+      errors[endpoint.key] =
+        result.reason instanceof Error
+          ? result.reason.message
+          : `${endpoint.label} request failed.`;
+    }
+  });
 
-  return Object.fromEntries(
-    API_ENDPOINTS.map((endpoint, index) => [endpoint.key, results[index].value]),
-  );
+  return { data, errors };
 }
 
 function getProductQuantity(product) {
@@ -72,7 +77,10 @@ function getOrderStatusCount(orders, status) {
   return orders.filter((order) => order.status === status).length;
 }
 
-function getAttentionSummaries(data) {
+function getAttentionSummaries(data, failedSections = {}) {
+  const productsUnavailable = Boolean(failedSections.products);
+  const ordersUnavailable = Boolean(failedSections.orders);
+  const purchaseOrdersUnavailable = Boolean(failedSections.purchaseOrders);
   const lowStockProducts = data.products.filter((product) => {
     const quantity = getProductQuantity(product);
     return quantity > 0 && quantity <= getProductReorderLevel(product);
@@ -89,35 +97,47 @@ function getAttentionSummaries(data) {
     {
       title: 'Low-stock products',
       records: lowStockProducts,
-      detail: lowStockProducts.length
-        ? lowStockProducts.map((product) => `${product.name} (${product.stock_quantity} units)`).join(', ')
-        : 'No products need reorder review.',
+      unavailable: productsUnavailable,
+      detail: productsUnavailable
+        ? 'Stock levels are unavailable right now.'
+        : lowStockProducts.length
+          ? lowStockProducts.map((product) => `${product.name} (${product.stock_quantity} units)`).join(', ')
+          : 'No products need reorder review.',
       tone: 'amber',
     },
     {
       title: 'Out-of-stock products',
       records: outOfStockProducts,
-      detail: outOfStockProducts.length
-        ? outOfStockProducts.map((product) => product.name).join(', ')
-        : 'No products are out of stock.',
+      unavailable: productsUnavailable,
+      detail: productsUnavailable
+        ? 'Stock levels are unavailable right now.'
+        : outOfStockProducts.length
+          ? outOfStockProducts.map((product) => product.name).join(', ')
+          : 'No products are out of stock.',
       tone: 'red',
     },
     {
       title: 'Pending sales orders',
       records: pendingOrders,
-      detail: pendingOrders.length
-        ? pendingOrders.map((order) => `#${order.id} · ${order.customer_name}`).join(', ')
-        : 'No sales orders are pending.',
+      unavailable: ordersUnavailable,
+      detail: ordersUnavailable
+        ? 'Sales orders are unavailable right now.'
+        : pendingOrders.length
+          ? pendingOrders.map((order) => `#${order.id} · ${order.customer_name}`).join(', ')
+          : 'No sales orders are pending.',
       tone: 'amber',
     },
     {
       title: 'Pending purchase orders',
       records: pendingPurchaseOrders,
-      detail: pendingPurchaseOrders.length
-        ? pendingPurchaseOrders
-            .map((order) => `#${order.id} · supplier ${order.supplier_id}`)
-            .join(', ')
-        : 'No purchase orders are pending.',
+      unavailable: purchaseOrdersUnavailable,
+      detail: purchaseOrdersUnavailable
+        ? 'Purchase orders are unavailable right now.'
+        : pendingPurchaseOrders.length
+          ? pendingPurchaseOrders
+              .map((order) => `#${order.id} · supplier ${order.supplier_id}`)
+              .join(', ')
+          : 'No purchase orders are pending.',
       tone: 'amber',
     },
   ];
@@ -147,8 +167,9 @@ const TONE_STYLES = {
   },
 };
 
-function StatCard({ label, value, detail, tone = 'teal', icon, loading }) {
+function StatCard({ label, value, detail, tone = 'teal', icon, loading, unavailable }) {
   const styles = TONE_STYLES[tone] ?? TONE_STYLES.teal;
+  const pending = loading || unavailable;
 
   return (
     <div className="group relative overflow-hidden rounded-xl border border-stone-200/80 bg-[#fffdf9] p-4 shadow-[0_1px_2px_rgba(28,25,23,0.04)] transition duration-300 hover:-translate-y-0.5 hover:border-stone-300 hover:shadow-[0_16px_30px_-24px_rgba(28,25,23,0.55)]">
@@ -167,9 +188,11 @@ function StatCard({ label, value, detail, tone = 'teal', icon, loading }) {
         className={`mt-3 text-2xl font-semibold leading-none tracking-tight tabular-nums ${styles.text}`}
         aria-live="polite"
       >
-        {loading ? '—' : numberFormatter.format(value)}
+        {pending ? '—' : numberFormatter.format(value)}
       </p>
-      <p className="mt-1.5 text-[11px] leading-tight text-stone-500">{detail}</p>
+      <p className="mt-1.5 text-[11px] leading-tight text-stone-500">
+        {unavailable ? 'Unavailable right now' : detail}
+      </p>
     </div>
   );
 }
@@ -187,9 +210,9 @@ function SectionHeading({ icon, title }) {
 
 function Dashboard() {
   const [data, setData] = useState(null);
+  const [failedSections, setFailedSections] = useState({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState('');
 
   async function loadDashboard(isRefresh = false) {
     if (isRefresh) {
@@ -197,15 +220,22 @@ function Dashboard() {
     } else {
       setLoading(true);
     }
-    setError('');
 
     try {
-      setData(await requestDashboardData());
-    } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : 'Unable to connect to one or more dashboard services.',
+      const result = await requestDashboardData();
+      setData((current) => ({
+        ...(current ?? emptyDashboardData),
+        ...result.data,
+      }));
+      setFailedSections(result.errors);
+    } catch {
+      setFailedSections(
+        Object.fromEntries(
+          API_ENDPOINTS.map((endpoint) => [
+            endpoint.key,
+            'Dashboard services could not be reached.',
+          ]),
+        ),
       );
     } finally {
       setLoading(false);
@@ -216,17 +246,24 @@ function Dashboard() {
   useEffect(() => {
     let active = true;
     requestDashboardData()
-      .then((dashboardData) => {
-        if (active) setData(dashboardData);
+      .then((result) => {
+        if (!active) return;
+        setData((current) => ({
+          ...(current ?? emptyDashboardData),
+          ...result.data,
+        }));
+        setFailedSections(result.errors);
       })
-      .catch((requestError) => {
-        if (active) {
-          setError(
-            requestError instanceof Error
-              ? requestError.message
-              : 'Unable to connect to one or more dashboard services.',
-          );
-        }
+      .catch(() => {
+        if (!active) return;
+        setFailedSections(
+          Object.fromEntries(
+            API_ENDPOINTS.map((endpoint) => [
+              endpoint.key,
+              'Dashboard services could not be reached.',
+            ]),
+          ),
+        );
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -238,6 +275,15 @@ function Dashboard() {
   }, []);
 
   const dashboardData = data ?? emptyDashboardData;
+  const failedEntries = API_ENDPOINTS.filter(
+    (endpoint) => failedSections[endpoint.key],
+  );
+  const productsUnavailable = Boolean(failedSections.products);
+  const categoriesUnavailable = Boolean(failedSections.categories);
+  const suppliersUnavailable = Boolean(failedSections.suppliers);
+  const ordersUnavailable = Boolean(failedSections.orders);
+  const purchaseOrdersUnavailable = Boolean(failedSections.purchaseOrders);
+  const showInitialPlaceholders = loading || !data;
 
   const lowStockProducts = useMemo(
     () =>
@@ -322,8 +368,8 @@ function Dashboard() {
   }, [dashboardData]);
 
   const attentionSummaries = useMemo(
-    () => getAttentionSummaries(dashboardData),
-    [dashboardData],
+    () => getAttentionSummaries(dashboardData, failedSections),
+    [dashboardData, failedSections],
   );
   const recentSalesOrders = useMemo(
     () => getLatestById(dashboardData.orders),
@@ -349,29 +395,29 @@ function Dashboard() {
   );
 
   const inventoryStats = [
-    { label: 'Total Products', value: dashboardData.products.length, detail: 'products in catalog', tone: 'teal', icon: 'box' },
-    { label: 'Total Categories', value: dashboardData.categories.length, detail: 'categories tracked', tone: 'teal', icon: 'tag' },
-    { label: 'Low Stock', value: metrics.lowStockCount, detail: 'products to review', tone: 'amber', icon: 'clock' },
-    { label: 'Out of Stock', value: metrics.outOfStockCount, detail: 'products unavailable', tone: 'red', icon: 'alert' },
-    { label: 'Total Units', value: metrics.totalUnits, detail: 'units on hand', tone: 'teal', icon: 'layers' },
+    { label: 'Total Products', value: dashboardData.products.length, detail: 'products in catalog', tone: 'teal', icon: 'box', unavailable: productsUnavailable },
+    { label: 'Total Categories', value: dashboardData.categories.length, detail: 'categories tracked', tone: 'teal', icon: 'tag', unavailable: categoriesUnavailable },
+    { label: 'Low Stock', value: metrics.lowStockCount, detail: 'products to review', tone: 'amber', icon: 'clock', unavailable: productsUnavailable },
+    { label: 'Out of Stock', value: metrics.outOfStockCount, detail: 'products unavailable', tone: 'red', icon: 'alert', unavailable: productsUnavailable },
+    { label: 'Total Units', value: metrics.totalUnits, detail: 'units on hand', tone: 'teal', icon: 'layers', unavailable: productsUnavailable },
   ];
   const salesStats = [
-    { label: 'Total Orders', value: dashboardData.orders.length, detail: 'sales orders', tone: 'teal', icon: 'cart' },
-    { label: 'Pending Orders', value: metrics.pendingOrders, detail: 'awaiting action', tone: 'amber', icon: 'clock' },
-    { label: 'Confirmed Orders', value: metrics.confirmedOrders, detail: 'confirmed', tone: 'teal', icon: 'check' },
-    { label: 'Delivered Orders', value: metrics.deliveredOrders, detail: 'delivered', tone: 'teal', icon: 'truck' },
+    { label: 'Total Orders', value: dashboardData.orders.length, detail: 'sales orders', tone: 'teal', icon: 'cart', unavailable: ordersUnavailable },
+    { label: 'Pending Orders', value: metrics.pendingOrders, detail: 'awaiting action', tone: 'amber', icon: 'clock', unavailable: ordersUnavailable },
+    { label: 'Confirmed Orders', value: metrics.confirmedOrders, detail: 'confirmed', tone: 'teal', icon: 'check', unavailable: ordersUnavailable },
+    { label: 'Delivered Orders', value: metrics.deliveredOrders, detail: 'delivered', tone: 'teal', icon: 'truck', unavailable: ordersUnavailable },
   ];
   const procurementStats = [
-    { label: 'Total Purchase Orders', value: dashboardData.purchaseOrders.length, detail: 'purchase orders', tone: 'teal', icon: 'clipboard' },
-    { label: 'Pending Purchase Orders', value: metrics.pendingPurchaseOrders, detail: 'awaiting action', tone: 'amber', icon: 'clock' },
-    { label: 'Received Purchase Orders', value: metrics.receivedPurchaseOrders, detail: 'received', tone: 'teal', icon: 'check' },
+    { label: 'Total Purchase Orders', value: dashboardData.purchaseOrders.length, detail: 'purchase orders', tone: 'teal', icon: 'clipboard', unavailable: purchaseOrdersUnavailable },
+    { label: 'Pending Purchase Orders', value: metrics.pendingPurchaseOrders, detail: 'awaiting action', tone: 'amber', icon: 'clock', unavailable: purchaseOrdersUnavailable },
+    { label: 'Received Purchase Orders', value: metrics.receivedPurchaseOrders, detail: 'received', tone: 'teal', icon: 'check', unavailable: purchaseOrdersUnavailable },
   ];
 
   const heroStats = [
-    { label: 'Products', value: dashboardData.products.length, tone: 'text-teal-300' },
-    { label: 'Units on hand', value: metrics.totalUnits, tone: 'text-white' },
-    { label: 'Low stock', value: metrics.lowStockCount, tone: 'text-amber-300' },
-    { label: 'Pending orders', value: metrics.pendingOrders, tone: 'text-rose-300' },
+    { label: 'Products', value: dashboardData.products.length, tone: 'text-teal-300', unavailable: productsUnavailable },
+    { label: 'Units on hand', value: metrics.totalUnits, tone: 'text-white', unavailable: productsUnavailable },
+    { label: 'Low stock', value: metrics.lowStockCount, tone: 'text-amber-300', unavailable: productsUnavailable },
+    { label: 'Pending orders', value: metrics.pendingOrders, tone: 'text-rose-300', unavailable: ordersUnavailable },
   ];
 
   return (
@@ -400,8 +446,8 @@ function Dashboard() {
               Inventory command center
             </h1>
             <p className="mt-2 max-w-xl text-sm leading-relaxed text-stone-400">
-              A live 3D snapshot of stock health across your catalog, with ML-driven demand
-              signals feeding the reorder queue.
+              A live 3D snapshot of stock health across your catalog, with demand
+              forecasts feeding the reorder queue.
             </p>
 
             <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -414,7 +460,9 @@ function Dashboard() {
                     {stat.label}
                   </p>
                   <p className={`mt-1 text-lg font-semibold leading-none tabular-nums ${stat.tone}`}>
-                    {loading || !data ? '—' : numberFormatter.format(stat.value)}
+                    {showInitialPlaceholders || stat.unavailable
+                      ? '—'
+                      : numberFormatter.format(stat.value)}
                   </p>
                 </div>
               ))}
@@ -468,14 +516,18 @@ function Dashboard() {
         </p>
       )}
 
-      {error && (
-        <div role="alert" className="flex flex-col gap-2 border-l-4 border-red-500 bg-red-50 px-3 py-2.5 text-sm text-red-900 sm:flex-row sm:items-center sm:justify-between">
-          <span>{error}</span>
+      {failedEntries.length > 0 && (
+        <div role="alert" className="flex flex-col gap-2 border-l-4 border-amber-500 bg-amber-50 px-3 py-2.5 text-sm text-amber-950 sm:flex-row sm:items-center sm:justify-between">
+          <span>
+            Some dashboard sections could not load:{' '}
+            {failedEntries.map((endpoint) => endpoint.label).join(', ')}. Other
+            sections show the latest available data.
+          </span>
           <button
             type="button"
             onClick={() => loadDashboard(Boolean(data))}
-            disabled={refreshing}
-            className="w-fit font-medium text-red-900 underline decoration-red-300 underline-offset-2 hover:decoration-red-700 disabled:opacity-60"
+            disabled={refreshing || loading}
+            className="w-fit font-medium text-amber-950 underline decoration-amber-400 underline-offset-2 hover:decoration-amber-700 disabled:opacity-60"
           >
             Try again
           </button>
@@ -486,7 +538,7 @@ function Dashboard() {
         <SectionHeading icon="box" title="Inventory" />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
           {inventoryStats.map((stat) => (
-            <StatCard key={stat.label} {...stat} loading={loading || !data} />
+            <StatCard key={stat.label} {...stat} loading={showInitialPlaceholders} />
           ))}
         </div>
       </section>
@@ -505,11 +557,18 @@ function Dashboard() {
             </div>
           </div>
           <span className="rounded-full border border-amber-200/70 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-900 tabular-nums">
-            {loading || !data ? '—' : numberFormatter.format(lowStockProducts.length)}
+            {showInitialPlaceholders || productsUnavailable
+              ? '—'
+              : numberFormatter.format(lowStockProducts.length)}
           </span>
         </div>
 
-        {!data ? (
+        {productsUnavailable ? (
+          <p className="p-4 text-sm text-stone-600">
+            Stock alerts are unavailable right now. Use Try again above to reload
+            them.
+          </p>
+        ) : !data ? (
           <p className="p-4 text-sm text-stone-600">
             {loading ? 'Loading stock alerts…' : 'Stock alerts are unavailable.'}
           </p>
@@ -575,7 +634,7 @@ function Dashboard() {
         <SectionHeading icon="cart" title="Sales" />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {salesStats.map((stat) => (
-            <StatCard key={stat.label} {...stat} loading={loading || !data} />
+            <StatCard key={stat.label} {...stat} loading={showInitialPlaceholders} />
           ))}
         </div>
       </section>
@@ -591,9 +650,10 @@ function Dashboard() {
               detail: 'suppliers',
               tone: 'teal',
               icon: 'users',
+              unavailable: suppliersUnavailable,
             },
           ].map((stat) => (
-            <StatCard key={stat.label} {...stat} loading={loading || !data} />
+            <StatCard key={stat.label} {...stat} loading={showInitialPlaceholders} />
           ))}
         </div>
       </section>
@@ -632,7 +692,7 @@ function Dashboard() {
                     {item.label}
                   </span>
                   <span className="font-semibold tabular-nums text-stone-600">
-                    {loading || !data ? '—' : item.value}
+                    {showInitialPlaceholders || productsUnavailable ? '—' : item.value}
                   </span>
                 </div>
                 <div className="h-2 w-full overflow-hidden rounded-full bg-stone-200/80">
@@ -644,15 +704,22 @@ function Dashboard() {
                           ? 'bg-gradient-to-r from-amber-300 to-orange-400'
                           : 'bg-gradient-to-r from-rose-400 to-red-500'
                     }`}
-                    style={{ width: loading || !data ? '0%' : item.value }}
+                    style={{
+                      width:
+                        showInitialPlaceholders || productsUnavailable
+                          ? '0%'
+                          : item.value,
+                    }}
                   />
                 </div>
                 <p className="mt-1 text-xs text-stone-500">
-                  {loading
-                    ? 'Loading product levels…'
-                    : !data
-                      ? 'Product levels are unavailable.'
-                      : item.amount}
+                  {productsUnavailable
+                    ? 'Product levels are unavailable right now.'
+                    : loading
+                      ? 'Loading product levels…'
+                      : !data
+                        ? 'Product levels are unavailable.'
+                        : item.amount}
                 </p>
               </div>
             ))}
@@ -688,15 +755,19 @@ function Dashboard() {
                         : 'text-rose-800 ring-rose-200/70'
                     }`}
                   >
-                    {loading || !data ? '—' : numberFormatter.format(alert.records.length)}
+                    {showInitialPlaceholders || alert.unavailable
+                      ? '—'
+                      : numberFormatter.format(alert.records.length)}
                   </span>
                 </div>
                 <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-stone-600">
-                  {loading
-                    ? 'Loading…'
-                    : !data
-                      ? 'Dashboard data is unavailable.'
-                      : alert.detail}
+                  {alert.unavailable
+                    ? alert.detail
+                    : loading
+                      ? 'Loading…'
+                      : !data
+                        ? 'Dashboard data is unavailable.'
+                        : alert.detail}
                 </p>
               </div>
             ))}
@@ -757,7 +828,11 @@ function Dashboard() {
           <div className="mt-4 grid gap-5 sm:grid-cols-2">
             <div>
               <h3 className="mb-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500">Sales Orders</h3>
-              {recentSalesOrders.length ? (
+              {ordersUnavailable ? (
+                <p className="text-sm text-stone-500">
+                  Recent sales orders are unavailable right now.
+                </p>
+              ) : recentSalesOrders.length ? (
                 <div className="space-y-3">
                   {recentSalesOrders.map((order) => (
                     <div
@@ -787,7 +862,11 @@ function Dashboard() {
 
             <div>
               <h3 className="mb-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500">Purchase Orders</h3>
-              {recentPurchaseOrders.length ? (
+              {purchaseOrdersUnavailable ? (
+                <p className="text-sm text-stone-500">
+                  Recent purchase orders are unavailable right now.
+                </p>
+              ) : recentPurchaseOrders.length ? (
                 <div className="space-y-3">
                   {recentPurchaseOrders.map((order) => (
                     <div

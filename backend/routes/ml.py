@@ -1,8 +1,11 @@
 from fastapi import APIRouter, Depends
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from auth.dependencies import get_current_user
 from database.connection import engine
+from ml.predict import generate_forecast
+from ml.reorder import load_inventory
 from ml.service import get_ml_results
 from models.product import Product
 
@@ -22,53 +25,67 @@ def get_db():
 def get_ml_insights(db: Session = Depends(get_db)):
     """Return demand forecast and reorder recommendations.
 
-    Recommendations are generated for the trained ML products. When a product with
-    the same name exists in the ERP catalog, its current stock and reorder level are
-    used to make the recommendation reflect live inventory.
+    The forecast is generated once per request. Recommendations use live ERP
+    stock when a catalog product matches a trained product name
+    (case-insensitive). Other trained products fall back to the bundled
+    inventory snapshot.
     """
-    # Baseline forecast from the ML model/training products
-    base = get_ml_results()
-    forecast_product_names = {item["product"] for item in base.get("recommendations", [])}
+    forecast_df = generate_forecast()
 
-    # Overlay ERP inventory for matching products
-    inventory = {}
+    product_names = {
+        str(name) for name in forecast_df["product"].dropna().unique()
+    }
     matched_products = (
         db.query(Product)
-        .filter(Product.name.in_(list(forecast_product_names)))
+        .filter(
+            func.lower(Product.name).in_(
+                [name.lower() for name in product_names]
+            )
+        )
         .all()
-        if forecast_product_names
+        if product_names
         else []
     )
+    name_to_product = {
+        product.name.lower(): product for product in matched_products
+    }
 
-    name_to_product = {p.name.lower(): p for p in matched_products}
+    default_inventory = load_inventory()
+    inventory = {}
+    for raw_product_id in forecast_df["product_id"].dropna().unique():
+        product_id = int(raw_product_id)
+        product_rows = forecast_df[forecast_df["product_id"] == product_id]
+        if product_rows.empty:
+            continue
 
-    for rec in base.get("recommendations", []):
-        pname = rec.get("product", "")
-        erp = name_to_product.get(str(pname).lower())
-        pid = rec.get("product_id")
-        if erp:
-            inventory[pid] = {
-                "stock": int(erp.stock_quantity or 0),
-                "lead_time": int(rec.get("lead_time", 3)),
-                "supplier": rec.get("supplier", "Default Supplier"),
-                "product": pname,
-            }
-        else:
-            inventory[pid] = {
-                "stock": int(rec.get("current_stock", 0)),
-                "lead_time": int(rec.get("lead_time", 3)),
-                "supplier": rec.get("supplier", "Default Supplier"),
-                "product": pname,
-            }
+        product_name = str(product_rows["product"].iloc[0])
+        erp_product = name_to_product.get(product_name.lower())
+        fallback = default_inventory.get(product_id, {})
 
-    if inventory:
-        base = get_ml_results(inventory=inventory)
-        # attach ERP linkage info
-        for rec in base.get("recommendations", []):
-            erp = name_to_product.get(str(rec.get("product", "")).lower())
-            rec["erp_product_id"] = erp.id if erp else None
-            rec["erp_sku"] = erp.sku if erp else None
-            if erp and erp.reorder_level is not None:
-                rec["erp_reorder_level"] = int(erp.reorder_level)
+        inventory[product_id] = {
+            "stock": (
+                int(erp_product.stock_quantity or 0)
+                if erp_product is not None
+                else int(fallback.get("stock", 0))
+            ),
+            "lead_time": int(fallback.get("lead_time", 3)),
+            "supplier": str(fallback.get("supplier", "Default Supplier")),
+            "product": product_name,
+        }
 
-    return base
+    results = get_ml_results(inventory=inventory, forecast_df=forecast_df)
+
+    for recommendation in results.get("recommendations", []):
+        erp_product = name_to_product.get(
+            str(recommendation.get("product", "")).lower()
+        )
+        recommendation["erp_product_id"] = (
+            erp_product.id if erp_product else None
+        )
+        recommendation["erp_sku"] = erp_product.sku if erp_product else None
+        if erp_product is not None and erp_product.reorder_level is not None:
+            recommendation["erp_reorder_level"] = int(
+                erp_product.reorder_level
+            )
+
+    return results

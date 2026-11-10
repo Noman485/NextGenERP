@@ -12,6 +12,7 @@ NextGenERP is an inventory and procurement ERP application for managing product 
 - **Inventory operations:** record stock-in and stock-out transactions with a reason and view transaction history. Stock-out operations reject quantities greater than available inventory.
 - **API health:** the `/health` endpoint checks database connectivity.
 - **Demand forecasting (ML):** an integrated XGBoost model trained on the Kaggle Store Item Demand dataset produces a 7-day demand forecast and smart reorder recommendations (held-out test WAPE **8.42%**, R² **0.744**). Results are available on the **Forecasting** page and through `GET /ml/insights`. See the [ML integration guide](./docs/ml-integration.md).
+- **In-app assistant:** a read-only assistant that is scoped to NextGenERP and available on every authenticated page. It answers questions about inventory, orders, suppliers, forecasting, navigation and troubleshooting using live workspace data. The built-in engine needs no API key; an OpenAI-compatible provider can be enabled optionally. It cannot create, edit, cancel or delete records. See the [assistant guide](./docs/ai-assistant.md).
 
 ### Not included / pending
 
@@ -141,6 +142,14 @@ Set-Location frontend
 npm ci
 npm run build
 ```
+
+The test catalog contains 1000 distinct scenarios across twelve modules. It is a traceability artifact, not 1000 automated tests; a scenario is marked passed only when it was executed and evidence was recorded. Regenerate it with:
+
+```powershell
+python tests\generate_test_cases.py
+```
+
+See the [test plan](./docs/TEST_PLAN.md), [execution report](./tests/TEST_EXECUTION_REPORT.md), [bug tracker](./docs/BUG_TRACKER.md) and [project audit](./docs/PROJECT_AUDIT.md).
 
 ## Deployment
 

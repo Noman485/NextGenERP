@@ -1,0 +1,1 @@
+"""NextGenERP Assistant package."""

@@ -59,7 +59,16 @@ export default function Suppliers() {
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
-    if (dialogMode && !dialog.open) dialog.showModal();
+    if (dialogMode && !dialog.open) {
+      try {
+        dialog.showModal();
+      } catch {
+        // Fallback for environments where showModal() is unavailable.
+        dialog.setAttribute('open', '');
+      }
+      const firstField = dialog.querySelector('input, textarea, select');
+      firstField?.focus();
+    }
     if (!dialogMode && dialog.open) dialog.close();
   }, [dialogMode]);
 

@@ -2,7 +2,7 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
 const apiTarget = process.env.API_PROXY_TARGET ?? 'http://127.0.0.1:8000'
-const apiPaths = '^/(auth|products|categories|suppliers|orders|purchase-orders|inventory-transactions|health)(/.*)?$'
+const apiPaths = '^/(auth|products|categories|suppliers|orders|purchase-orders|inventory-transactions|health|ml)(/.*)?$'
 
 // https://vite.dev/config/
 export default defineConfig({

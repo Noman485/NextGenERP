@@ -9,9 +9,11 @@ import Suppliers from './pages/Suppliers';
 import SalesOrders from './pages/SalesOrders';
 import PurchaseOrders from './pages/PurchaseOrders';
 import InventoryTransactions from './pages/InventoryTransactions';
+import Forecasting from './pages/Forecasting';
 
 const navigation = [
   { name: 'Dashboard', path: '/', icon: 'â–£' },
+  { name: 'Forecasting', path: '/forecasting', icon: '📈' },
   { name: 'Products', path: '/products', icon: 'â—«' },
   { name: 'Inventory Operations', path: '/inventory-operations', icon: '↕' },
   { name: 'Categories', path: '/categories', icon: 'â–¤' },
@@ -116,6 +118,7 @@ function App() {
         <main className="p-5">
           <Routes>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/forecasting" element={<Forecasting />} />
             <Route path="/products" element={<Products />} />
             <Route path="/categories" element={<Categories />} />
             <Route path="/suppliers" element={<Suppliers />} />

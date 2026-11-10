@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 from sqlalchemy import event
+from sqlalchemy.orm import Session
 from fastapi.testclient import TestClient
 
 _TEST_DATABASE_DIR = Path(tempfile.mkdtemp(prefix="nextgenerp-backend-tests-"))
@@ -52,6 +53,33 @@ def client():
 @pytest.fixture
 def unauthenticated_client():
     with TestClient(main.app) as test_client:
+        yield test_client
+
+
+@pytest.fixture
+def admin_client():
+    from admin_provision import provision_admin
+
+    with TestClient(main.app) as test_client:
+        with Session(engine) as session:
+            provision_admin(
+                session,
+                "test-admin",
+                "test-admin-password-123",
+                "test-admin@example.test",
+            )
+        response = test_client.post(
+            "/auth/login",
+            json={
+                "username": "test-admin",
+                "password": "test-admin-password-123",
+            },
+        )
+        assert response.status_code == 200, response.text
+        assert response.json()["user"]["role"] == "ADMIN"
+        test_client.headers["Authorization"] = (
+            f"Bearer {response.json()['access_token']}"
+        )
         yield test_client
 
 

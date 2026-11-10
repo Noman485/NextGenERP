@@ -67,10 +67,22 @@ packages beyond the existing `requests` dependency.
 - The selected language is sent with every request. Changing the language
   clears the current conversation so answers do not mix scripts or context.
 - Voice input uses the browser-native `SpeechRecognition` /
-  `webkitSpeechRecognition` API. The recognized transcript is submitted
-  automatically as the user's message.
+  `webkitSpeechRecognition` API. The interim transcript is shown while listening
+  and only the final transcript is submitted.
+- Microphone input requires a secure context (HTTPS or localhost). On an insecure
+  origin the control is disabled with guidance, and typing remains available.
+- A 15-second silence timeout stops listening and explains what happened.
+- Permission, service, no-speech, audio-capture, network,
+  language-not-supported, busy and unknown errors each map to specific localized
+  guidance.
+- Stop, Escape, close, language change and unmount abort recognition safely.
+  Late results after stop or close are ignored, and a synchronous guard prevents
+  a rapid double-click from starting two sessions.
 - Spoken replies use `speechSynthesis`. Auto-speak is **off by default**; each
   assistant message also has its own play/stop button.
+- Voices are loaded again when the browser fires `voiceschanged`. Playback uses
+  the exact locale voice when available, then a same-language voice, then a safe
+  default.
 - No audio is stored or sent to NextGenERP. Browser speech recognition may use
   the browser vendor's speech service, so availability and privacy behavior
   depend on the browser.
@@ -204,11 +216,16 @@ The browser flow was verified with Puppeteer scripts on desktop and mobile:
 - Existing assistant regression: login, open panel, live low-stock answer, help
   answer, off-topic refusal, close, 404 route, mobile layout, mobile chat and
   Escape close.
-- Voice/language flow: three language options, mic button enabled in Edge,
-  auto-speak toggle, Hindi and Bengali welcome/suggestions, localized live
-  low-stock answers, Bengali scope refusal, localized launcher after close,
-  speaker play/stop state, 366 × 544 px mobile panel, zero horizontal overflow
-  and no console errors.
+- Mocked voice flow: 41/41 checks covering no auto-start, locales, interim
+  transcript, single final submission, exact voice selection, stop playback,
+  auto-speak, eight error codes, timeout, late results, language switch
+  mid-listen, XSS escaping and rapid double-click.
+- Secure-context flow: 8/8 checks on a genuinely insecure non-localhost origin.
+- Support-detection flow: 4/4 checks for missing recognition and missing
+  synthesis.
+- Native language/layout flow: Hindi/Bengali welcome, suggestions, live answers,
+  Bengali scope refusal, Escape close, 366 × 544 px mobile panel, zero horizontal
+  overflow and no console errors.
 
 Real microphone capture and permission prompts cannot be automated in headless
 Edge; they remain a manual check.

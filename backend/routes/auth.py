@@ -1,7 +1,10 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from admin_provision import normalize_email
 from auth.dependencies import get_current_user
 from auth.security import (
     DUMMY_PASSWORD_HASH,
@@ -24,7 +27,29 @@ def get_db():
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 def register(user_data: UserRegistration, db: Session = Depends(get_db)):
     username = user_data.username.lower()
-    user = User(username=username, password_hash=hash_password(user_data.password))
+    try:
+        email = normalize_email(user_data.email)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+    if db.query(User).filter(User.username == username).first() is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Username is already registered",
+        )
+    if email and db.query(User).filter(User.email == email).first() is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email is already registered",
+        )
+
+    user = User(
+        username=username,
+        email=email,
+        password_hash=hash_password(user_data.password),
+        role="USER",
+        is_active=True,
+    )
     try:
         db.add(user)
         db.flush()
@@ -34,7 +59,7 @@ def register(user_data: UserRegistration, db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Username is already registered",
+            detail="Username or email is already registered",
         ) from error
     except HTTPException:
         db.rollback()
@@ -67,6 +92,18 @@ def login(user_data: UserLogin, db: Session = Depends(get_db)):
             detail="Invalid username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This account has been deactivated",
+        )
+
+    user.last_login_at = datetime.now(timezone.utc)
+    try:
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
 
     return TokenResponse(
         access_token=create_access_token(user.id),

@@ -25,6 +25,13 @@ Severity values: `critical`, `high`, `medium`, `low`.
 | BUG-013 | Low | Copy | Dashboard described the product as "ML-driven demand signals" | Legacy AI-centric wording | Replaced with "demand forecasts feeding the reorder queue" | Source grep; production build |
 | BUG-014 | Low | Assistant | Off-topic questions could reach the optional provider | Scope check was not guaranteed before the LLM bridge | Engine refuses out-of-scope messages before calling the provider; tests assert the refusal path | `test_assistant.py` scope-refusal cases |
 | BUG-024 | Medium | Assistant | Hindi/Bengali greetings such as `नमस्ते` and `নমস্কার` were treated as off-topic | The greeting normalizer stripped Devanagari/Bengali combining marks, so the words no longer matched the greeting list | Preserve `U+0900-U+097F` and `U+0980-U+09FF` in `_is_greeting` and add localized greeting tests | `test_assistant_localizes_greeting_and_suggestions`; Hindi/Bengali greetings return the localized intro instead of a refusal |
+| BUG-025 | High | Administrator | `/admin/*` API calls returned 404 through the Vite development server | The proxy allowlist regex omitted `admin` | Added `admin` to `apiPaths` in `frontend/vite.config.js` | Administrator E2E: overview, all analytics tabs and user APIs returned 200 |
+| BUG-026 | High | Voice | A rapid double-click on the microphone created two recognition sessions | The `starting` React state had not committed before the second click handler ran | Added a synchronous `startingRef` guard and reset it on start failure, stop, error, end and unmount | Mocked voice E2E: rapid double-click created at most one session |
+| BUG-027 | Medium | Voice | On an insecure HTTP origin the microphone looked available and could attempt recognition | The UI checked API presence but not `window.isSecureContext` | Detect secure context, disable the microphone with guidance, and refuse to start recognition even if the control is forced | Secure-context E2E: 8/8 checks passed on `http://192.168.1.7:5174` |
+| BUG-028 | Medium | Voice | Voices that arrived after mount were missed, and playback could pick an unrelated voice | The voice list was read once and matching used the first available voice | Listen for `voiceschanged`, then select exact locale, same-language, then a safe default | Mocked voice E2E: exact `English India`, `Hindi India` and `Bengali India` voices selected |
+| BUG-029 | Medium | Voice | Late recognition results after stop or panel close could still submit a message | Result handlers did not check whether the session was still current | Abort on stop/close and ignore results whose recognition object is no longer current | Mocked voice E2E: late result after stop and after close were both ignored |
+| BUG-030 | Medium | Administrator | Legacy demo orders had no timestamps, so daily/monthly analytics were empty | The analytics columns were added after the demo data was created | Added an idempotent backfill that only touches `@example.test` demo rows | Live database: 100 orders spread over the last year; real rows untouched |
+| BUG-031 | Medium | Administrator | Existing databases lacked the role, active-status and timestamp columns | The original schema used `create_all` with no migration step | Added additive, idempotent migrations for SQLite and PostgreSQL and called `ensure_schema()` at startup | Live database migrated after a backup; backend suite passes |
 
 ## Open
 
@@ -40,6 +47,10 @@ Severity values: `critical`, `high`, `medium`, `low`.
 | BUG-022 | Low | Assistant | Snapshot caps products, suppliers and recent orders | Very large workspaces get partial answers | State the caps in the reply or add targeted lookup tools |
 | BUG-023 | Low | Assistant | Documentation retrieval is keyword-based | Some paraphrased questions miss the best doc | Add embeddings or a larger curated topic map |
 
+| BUG-032 | Medium | Administrator | Analytics load and aggregate all orders in Python on each request | Large datasets will make dashboards slow and memory-heavy | Add indexed SQL aggregation or a cached daily rollup |
+| BUG-033 | Medium | Administrator | Inventory value is reported at selling price only | The dashboard cannot show cost-based inventory value | Add product cost data and a cost-value view |
+| BUG-034 | Low | Administrator | Account activation changes are not audit-logged | Harder to investigate who deactivated an account | Log actor, target, action and timestamp without secrets |
+
 ## Blocked verification
 
 | ID | Area | Why blocked | What is needed |
@@ -50,6 +61,8 @@ Severity values: `critical`, `high`, `medium`, `low`.
 | BLK-004 | Cross-browser E2E | Only headless Edge is installed | Firefox/WebKit runners or Playwright browsers |
 | BLK-005 | Voice microphone capture | Headless Edge cannot grant a real microphone permission or supply audio input | Manual or device-farm check with a real microphone |
 | BLK-006 | Cross-browser voice | Web Speech support and voice availability differ by browser | Test Firefox/Safari or document supported browsers |
+| BLK-007 | Administrator analytics on PostgreSQL | The suite and live database use SQLite; PostgreSQL aggregation and index behavior are unverified | Run the analytics tests and a seeded dataset against PostgreSQL |
+| BLK-008 | Concurrent administrator changes | Last-admin protection is tested sequentially, not under two simultaneous deactivation requests | Add a PostgreSQL concurrency test with two administrator sessions |
 
 ## Triage rules
 

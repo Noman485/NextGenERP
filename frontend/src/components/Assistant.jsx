@@ -57,6 +57,15 @@ const UI_TEXT = {
     micNetwork:
       'Voice recognition is unavailable right now. Check your connection or type your question.',
     micError: 'Voice input could not start. Please type your question.',
+    micLanguage:
+      'Voice recognition does not support the selected language in this browser. Choose another language or type your question.',
+    micTimeout:
+      'No speech was detected in time. Try again and speak after the microphone starts.',
+    micBusy: 'Voice input is already starting. Please wait a moment.',
+    micStopped: 'Voice input stopped.',
+    secureContext:
+      'Voice input needs a secure connection. Open the app over HTTPS or on localhost, or type your question.',
+    interim: 'Heard',
     retry: 'Retry',
     assistantError: 'The assistant could not answer right now',
     unreachable:
@@ -94,6 +103,15 @@ const UI_TEXT = {
     micNetwork:
       'वॉइस पहचान अभी उपलब्ध नहीं है। कनेक्शन जाँचें या प्रश्न टाइप करें।',
     micError: 'वॉइस इनपुट शुरू नहीं हो सका। कृपया प्रश्न टाइप करें।',
+    micLanguage:
+      'इस ब्राउज़र में चुनी गई भाषा के लिए वॉइस पहचान समर्थित नहीं है। दूसरी भाषा चुनें या प्रश्न टाइप करें।',
+    micTimeout:
+      'समय पर कोई आवाज़ नहीं मिली। फिर प्रयास करें और माइक्रोफ़ोन शुरू होने के बाद बोलें।',
+    micBusy: 'वॉइस इनपुट पहले से शुरू हो रहा है। कृपया प्रतीक्षा करें।',
+    micStopped: 'वॉइस इनपुट रुक गया।',
+    secureContext:
+      'वॉइस इनपुट के लिए सुरक्षित कनेक्शन आवश्यक है। ऐप को HTTPS या localhost पर खोलें, या प्रश्न टाइप करें।',
+    interim: 'सुना',
     retry: 'फिर प्रयास करें',
     assistantError: 'सहायक अभी उत्तर नहीं दे सका',
     unreachable: 'सहायक से संपर्क नहीं हो रहा। जाँचें कि बैकएंड चल रहा है।',
@@ -130,6 +148,15 @@ const UI_TEXT = {
     micNetwork:
       'কণ্ঠ শনাক্তকরণ এখন উপলব্ধ নয়। সংযোগ পরীক্ষা করুন বা প্রশ্ন টাইপ করুন।',
     micError: 'কণ্ঠ ইনপুট শুরু করা যায়নি। অনুগ্রহ করে প্রশ্ন টাইপ করুন।',
+    micLanguage:
+      'এই ব্রাউজারে নির্বাচিত ভাষার জন্য কণ্ঠ শনাক্তকরণ সমর্থিত নয়। অন্য ভাষা বেছে নিন বা প্রশ্ন টাইপ করুন।',
+    micTimeout:
+      'সময়ে কোনো কথা শোনা যায়নি। আবার চেষ্টা করুন এবং মাইক্রোফোন চালু হওয়ার পরে বলুন।',
+    micBusy: 'কণ্ঠ ইনপুট ইতিমধ্যে শুরু হচ্ছে। অনুগ্রহ করে অপেক্ষা করুন।',
+    micStopped: 'কণ্ঠ ইনপুট বন্ধ হয়েছে।',
+    secureContext:
+      'কণ্ঠ ইনপুটের জন্য নিরাপদ সংযোগ প্রয়োজন। HTTPS বা localhost ব্যবহার করুন, অথবা প্রশ্ন টাইপ করুন।',
+    interim: 'শোনা গেছে',
     retry: 'আবার চেষ্টা করুন',
     assistantError: 'সহায়ক এখন উত্তর দিতে পারেনি',
     unreachable: 'সহায়কের সাথে সংযোগ হচ্ছে না। ব্যাকএন্ড চলছে কিনা দেখুন।',
@@ -165,6 +192,34 @@ function speechLocale(language) {
   return LANGUAGES.find((item) => item.code === language)?.speech || 'en-IN';
 }
 
+const RECOGNITION_TIMEOUT_MS = 15000;
+
+function hasSecureContext() {
+  if (typeof window === 'undefined') return false;
+  if (window.isSecureContext) return true;
+  const hostname = window.location?.hostname ?? '';
+  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]';
+}
+
+function pickVoice(voices, locale, language) {
+  if (!Array.isArray(voices) || voices.length === 0) return null;
+  const wantedLocale = locale.toLowerCase();
+  const wantedLanguage = language.toLowerCase();
+  const byLocale = voices.find(
+    (voice) => (voice.lang || '').toLowerCase() === wantedLocale,
+  );
+  if (byLocale) return byLocale;
+  const byLanguage = voices.find(
+    (voice) => (voice.lang || '').toLowerCase().split('-')[0] === wantedLanguage,
+  );
+  if (byLanguage) return byLanguage;
+  return (
+    voices.find((voice) =>
+      (voice.lang || '').toLowerCase().startsWith(wantedLanguage),
+    ) || null
+  );
+}
+
 function getErrorMessage(data, fallback) {
   if (typeof data.detail === 'string') return data.detail;
   if (Array.isArray(data.detail)) {
@@ -184,21 +239,50 @@ export default function Assistant() {
   const [voiceError, setVoiceError] = useState('');
   const [lastAttempt, setLastAttempt] = useState(null);
   const [listening, setListening] = useState(false);
+  const [starting, setStarting] = useState(false);
+  const [interimText, setInterimText] = useState('');
+  const [voices, setVoices] = useState([]);
   const [speakingText, setSpeakingText] = useState('');
   const [autoSpeak, setAutoSpeak] = useState(false);
   const logRef = useRef(null);
   const inputRef = useRef(null);
   const recognitionRef = useRef(null);
+  const recognitionTimeoutRef = useRef(null);
+  const recognitionTimedOutRef = useRef(false);
+  const startingRef = useRef(false);
   const submitRef = useRef(null);
   const requestSeqRef = useRef(0);
 
   const copy = UI_TEXT[language];
   const recognitionSupported = Boolean(getSpeechRecognition());
+  const secureContext = hasSecureContext();
+  const voiceInputAvailable = recognitionSupported && secureContext;
   const speechSupported = canSpeak();
 
   useEffect(() => {
     if (open) inputRef.current?.focus();
   }, [open]);
+
+  useEffect(() => {
+    if (!canSpeak()) return undefined;
+    const synth = window.speechSynthesis;
+    function loadVoices() {
+      try {
+        setVoices(synth.getVoices() || []);
+      } catch {
+        setVoices([]);
+      }
+    }
+    loadVoices();
+    if (typeof synth.addEventListener === 'function') {
+      synth.addEventListener('voiceschanged', loadVoices);
+      return () => synth.removeEventListener('voiceschanged', loadVoices);
+    }
+    synth.onvoiceschanged = loadVoices;
+    return () => {
+      synth.onvoiceschanged = null;
+    };
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -211,18 +295,8 @@ export default function Assistant() {
 
     function handleKeyDown(event) {
       if (event.key !== 'Escape') return;
-      const recognition = recognitionRef.current;
-      if (recognition) {
-        try {
-          recognition.abort();
-        } catch {
-          // Recognition may already be stopped.
-        }
-      }
-      recognitionRef.current = null;
-      setListening(false);
-      if (canSpeak()) window.speechSynthesis.cancel();
-      setSpeakingText('');
+      stopListening();
+      stopSpeaking();
       setOpen(false);
     }
 
@@ -232,7 +306,10 @@ export default function Assistant() {
 
   useEffect(() => {
     return () => {
+      clearRecognitionTimeout();
+      startingRef.current = false;
       const recognition = recognitionRef.current;
+      recognitionRef.current = null;
       if (recognition) {
         try {
           recognition.abort();
@@ -243,6 +320,13 @@ export default function Assistant() {
       if (canSpeak()) window.speechSynthesis.cancel();
     };
   }, []);
+
+  function clearRecognitionTimeout() {
+    if (recognitionTimeoutRef.current !== null) {
+      window.clearTimeout(recognitionTimeoutRef.current);
+      recognitionTimeoutRef.current = null;
+    }
+  }
 
   function stopSpeaking() {
     if (canSpeak()) window.speechSynthesis.cancel();
@@ -266,38 +350,58 @@ export default function Assistant() {
     utterance.rate = 0.98;
 
     try {
-      const voices = window.speechSynthesis.getVoices() || [];
-      const voice =
-        voices.find((item) => item.lang === locale) ||
-        voices.find((item) =>
-          item.lang?.toLowerCase().startsWith(language.toLowerCase()),
-        );
+      const available = voices.length
+        ? voices
+        : window.speechSynthesis.getVoices() || [];
+      const voice = pickVoice(available, locale, language);
       if (voice) utterance.voice = voice;
     } catch {
       // Voice selection is best-effort; the default voice still works.
     }
 
-    utterance.onend = () => setSpeakingText('');
-    utterance.onerror = () => setSpeakingText('');
+    const clearIfCurrent = () =>
+      setSpeakingText((current) => (current === replyText ? '' : current));
+
+    utterance.onend = clearIfCurrent;
+    utterance.onerror = (event) => {
+      clearIfCurrent();
+      const code = event?.error;
+      if (!['interrupted', 'canceled', 'cancelled'].includes(code)) {
+        setVoiceError(copy.speechUnsupported);
+      }
+    };
     setSpeakingText(replyText);
     window.speechSynthesis.speak(utterance);
   }
 
   function stopListening() {
+    clearRecognitionTimeout();
+    recognitionTimedOutRef.current = false;
+    startingRef.current = false;
     const recognition = recognitionRef.current;
-    if (recognition) {
-      try {
-        recognition.stop();
-      } catch {
-        // Recognition may already be stopped.
-      }
-    }
     recognitionRef.current = null;
     setListening(false);
+    setStarting(false);
+    setInterimText('');
+    if (recognition) {
+      try {
+        recognition.abort();
+      } catch {
+        try {
+          recognition.stop();
+        } catch {
+          // Recognition may already be stopped.
+        }
+      }
+    }
   }
 
   function startListening() {
     const SpeechRecognition = getSpeechRecognition();
+    if (!secureContext) {
+      setVoiceError(copy.secureContext);
+      return;
+    }
     if (!SpeechRecognition) {
       setVoiceError(copy.voiceUnsupported);
       return;
@@ -306,51 +410,117 @@ export default function Assistant() {
       stopListening();
       return;
     }
+    if (starting || startingRef.current) {
+      setVoiceError(copy.micBusy);
+      return;
+    }
     if (sending) return;
 
     stopSpeaking();
     setVoiceError('');
     setError('');
+    setInterimText('');
+    recognitionTimedOutRef.current = false;
 
     const recognition = new SpeechRecognition();
     recognition.lang = speechLocale(language);
-    recognition.interimResults = false;
+    recognition.interimResults = true;
     recognition.continuous = false;
     recognition.maxAlternatives = 1;
 
-    recognition.onstart = () => setListening(true);
+    recognition.onstart = () => {
+      if (recognitionRef.current !== recognition) return;
+      startingRef.current = false;
+      setStarting(false);
+      setListening(true);
+      clearRecognitionTimeout();
+      recognitionTimeoutRef.current = window.setTimeout(() => {
+        if (recognitionRef.current !== recognition) return;
+        recognitionTimedOutRef.current = true;
+        setVoiceError(copy.micTimeout);
+        setInterimText('');
+        try {
+          recognition.stop();
+        } catch {
+          try {
+            recognition.abort();
+          } catch {
+            // Recognition may already be stopped.
+          }
+        }
+      }, RECOGNITION_TIMEOUT_MS);
+    };
+
     recognition.onresult = (event) => {
-      const transcript =
-        event.results?.[0]?.[0]?.transcript?.trim() || '';
-      if (transcript) {
+      if (recognitionRef.current !== recognition) return;
+      let interim = '';
+      let final = '';
+      for (
+        let index = event.resultIndex ?? 0;
+        index < event.results.length;
+        index += 1
+      ) {
+        const result = event.results[index];
+        const transcript = result?.[0]?.transcript ?? '';
+        if (result.isFinal) final += transcript;
+        else interim += transcript;
+      }
+      if (interim.trim()) setInterimText(interim.trim());
+      if (final.trim()) {
+        clearRecognitionTimeout();
+        setInterimText('');
         setInput('');
-        submitRef.current?.(transcript);
+        submitRef.current?.(final.trim());
       }
     };
+
     recognition.onerror = (event) => {
+      if (recognitionRef.current !== recognition) return;
+      clearRecognitionTimeout();
+      startingRef.current = false;
       const code = event?.error;
+      if (code === 'aborted') {
+        setInterimText('');
+        return;
+      }
       if (code === 'not-allowed' || code === 'service-not-allowed') {
         setVoiceError(copy.micDenied);
       } else if (code === 'no-speech') {
-        setVoiceError(copy.micNoSpeech);
+        setVoiceError(
+          recognitionTimedOutRef.current ? copy.micTimeout : copy.micNoSpeech,
+        );
       } else if (code === 'audio-capture') {
         setVoiceError(copy.micNoDevice);
       } else if (code === 'network') {
         setVoiceError(copy.micNetwork);
+      } else if (code === 'language-not-supported') {
+        setVoiceError(copy.micLanguage);
+      } else if (code === 'busy') {
+        setVoiceError(copy.micBusy);
       } else {
         setVoiceError(copy.micError);
       }
     };
+
     recognition.onend = () => {
-      recognitionRef.current = null;
+      clearRecognitionTimeout();
+      startingRef.current = false;
+      if (recognitionRef.current === recognition) recognitionRef.current = null;
       setListening(false);
+      setStarting(false);
+      setInterimText('');
     };
 
     recognitionRef.current = recognition;
+    startingRef.current = true;
+    setStarting(true);
     try {
       recognition.start();
     } catch {
+      clearRecognitionTimeout();
+      startingRef.current = false;
       recognitionRef.current = null;
+      setStarting(false);
       setListening(false);
       setVoiceError(copy.micError);
     }
@@ -673,15 +843,25 @@ export default function Assistant() {
           <button
             type="button"
             onClick={startListening}
-            disabled={!recognitionSupported || sending}
+            disabled={!voiceInputAvailable || sending || starting}
             aria-pressed={listening}
-            aria-label={listening ? copy.stopListening : copy.voiceInput}
-            title={
-              recognitionSupported
-                ? listening
+            aria-label={
+              starting
+                ? copy.micBusy
+                : listening
                   ? copy.stopListening
                   : copy.voiceInput
-                : copy.voiceUnsupported
+            }
+            title={
+              !secureContext
+                ? copy.secureContext
+                : recognitionSupported
+                  ? starting
+                    ? copy.micBusy
+                    : listening
+                      ? copy.stopListening
+                      : copy.voiceInput
+                  : copy.voiceUnsupported
             }
             className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border transition disabled:cursor-not-allowed disabled:opacity-40 ${
               listening
@@ -709,8 +889,26 @@ export default function Assistant() {
             <Icon name="send" size={16} />
           </button>
         </div>
+        {listening && interimText && (
+          <p
+            aria-live="polite"
+            className="mt-2 rounded-md border border-teal-200 bg-teal-50 px-2 py-1.5 text-xs text-teal-900"
+          >
+            <span className="font-semibold">{copy.interim}:</span> {interimText}
+          </p>
+        )}
+        {!secureContext && (
+          <p className="mt-2 text-[10px] leading-snug text-amber-700">
+            {copy.secureContext}
+          </p>
+        )}
         <p className="mt-2 text-[10px] leading-snug text-stone-400">
-          {listening ? (
+          {starting ? (
+            <span className="inline-flex items-center gap-1.5 text-stone-500">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-stone-400" />
+              {copy.micBusy}
+            </span>
+          ) : listening ? (
             <span className="inline-flex items-center gap-1.5 text-rose-600">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-500" />
               {copy.listening}

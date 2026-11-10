@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -7,7 +9,7 @@ class Credentials(BaseModel):
 
 
 class UserRegistration(Credentials):
-    pass
+    email: str | None = Field(default=None, max_length=255)
 
 
 class UserLogin(BaseModel):
@@ -20,6 +22,10 @@ class UserResponse(BaseModel):
 
     id: int
     username: str
+    email: str | None = None
+    role: str = "USER"
+    is_active: bool = True
+    created_at: datetime | None = None
 
 
 class TokenResponse(BaseModel):

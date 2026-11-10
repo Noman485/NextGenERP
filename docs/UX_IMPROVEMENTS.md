@@ -91,17 +91,60 @@ replies.
 | Close | Close button and Escape; mobile panel fits the viewport |
 | Read-only | The assistant explains actions but never performs them |
 
-Verified on desktop and mobile: launcher, open, three language options, mic
-button enabled in Edge, auto-speak toggle, Hindi and Bengali welcome and
-suggestions, localized live low-stock answers, Bengali scope refusal, localized
-launcher after close, speaker play/stop state, zero horizontal overflow, mobile
-chat and Escape close, with no console errors.
+Voice reliability improvements:
+
+- Microphone input is disabled with visible guidance on insecure HTTP origins
+  (anything other than HTTPS or localhost). A forced click still cannot create a
+  recognition session.
+- Voices are loaded again when the browser fires `voiceschanged`, so late voice
+  lists are used.
+- Playback selects the exact locale voice, then a same-language voice, then a
+  safe default.
+- The interim transcript is shown while listening but only the final transcript
+  is submitted.
+- A 15-second silence timeout stops listening and explains what happened.
+- Permission, service, no-speech, audio-capture, network,
+  language-not-supported, busy and unknown errors each have specific localized
+  guidance.
+- Stop, Escape, close, language change and unmount abort recognition safely, and
+  late results are ignored.
+- A synchronous guard prevents a rapid double-click from starting two recognition
+  sessions.
+
+Verified with a mocked Web Speech API in headless Edge (41/41 checks), a genuine
+insecure origin (8/8 checks), support-detection pages (4/4 checks) and a native
+assistant language/layout run. The native run covered Hindi/Bengali welcome,
+suggestions, live answers, Bengali scope refusal, Escape close and a 390 px
+layout with zero horizontal overflow.
 
 Not automated: real microphone capture and the browser permission prompt. The
 voice E2E confirms the controls, language payloads, localized replies and
 speaker state; actual audio input remains a manual check.
 
-## 5. Authentication
+## 5. Administrator area
+
+A separate administrator experience was added without exposing it to normal
+users.
+
+| Change | Before | After | Why it matters | Status |
+| --- | --- | --- | --- | --- |
+| Separate sign-in | No administrator concept | `/admin/login` with a distinct administrator layout | Keeps elevated access out of the normal workspace | Verified |
+| Access denial | Not applicable | Normal users are rejected at sign-in and see an access-denied screen on `/admin` | Prevents accidental or forced entry | Verified |
+| Overview | No business-wide view | Realized revenue, pending pipeline, order counts, inventory value, purchase spend and recent activity | Gives a commercial summary without mixing pending and realized revenue | Verified |
+| Analytics tabs | None | Daily, monthly, yearly, user, product, inventory and supplier views | Covers the requested reporting dimensions | Verified |
+| Charts | None | Lightweight accessible SVG line and bar charts with text summaries | Avoids a new chart dependency and keeps data readable to assistive technology | Verified |
+| User management | None | Search, pagination, safe detail modal, activate/deactivate | Supports account administration without deleting business records | Verified |
+| Guardrails | None | Self-deactivation disabled; last active administrator protected | Prevents locking the organization out | Verified |
+| Mobile layout | None | Administrator shell and tables fit a 390 px viewport | Administrators can check the business from a phone | Verified |
+
+Revenue presentation:
+
+- Realized revenue is labelled separately from pending pipeline.
+- Cancelled orders are excluded from both.
+- Inventory value is explicitly labelled "at selling price".
+- Empty and loading states are distinct from a real zero.
+
+## 6. Authentication
 
 - Split-screen layout with a clear sign-in form and password visibility toggle.
 - Inline field validation and API error messages.
@@ -109,7 +152,7 @@ speaker state; actual audio input remains a manual check.
 - No demo credentials are embedded in production code.
 - Copy explains the workspace instead of advertising "AI".
 
-## 6. Forecasting
+## 7. Forecasting
 
 - User-facing labels describe demand planning and reorder suggestions.
 - Loading, empty, error and refresh states are explicit.
@@ -117,11 +160,12 @@ speaker state; actual audio input remains a manual check.
 - The 3D chart has a fallback and does not block the table.
 - The frozen model and reported metrics are unchanged.
 
-## 7. Responsive behavior
+## 8. Responsive behavior
 
-Checked widths: 390 px mobile and 1440 px desktop for the assistant and shell.
-The assistant panel measured 366 × 544 px at 390 px wide with 12 px side
-margins and zero horizontal overflow.
+Checked widths: 390 px mobile and 1440 px desktop for the assistant and shell,
+plus a 390 px administrator overview pass. The assistant panel measured
+366 × 544 px at 390 px wide with 12 px side margins and zero horizontal overflow.
+The administrator overview also fits 390 px without horizontal overflow.
 
 Still recommended:
 
@@ -130,7 +174,7 @@ Still recommended:
 - Add a manual microphone-permission and audio-capture pass in a real browser
   session (headless Edge cannot grant or exercise a real microphone).
 
-## 8. Remaining UX opportunities
+## 9. Remaining UX opportunities
 
 | Priority | Opportunity | Benefit |
 | --- | --- | --- |
@@ -143,7 +187,7 @@ Still recommended:
 | Low | Add dark-mode polish for the new inventory page | Visual consistency |
 | Low | Add skeleton rows instead of dashes during loading | Perceived speed |
 
-## 9. Design principles used
+## 10. Design principles used
 
 1. Never show a false zero when data failed to load.
 2. Name the failed section and keep the rest usable.

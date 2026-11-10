@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 from database.connection import Base, engine
+from database.migrations import ensure_schema
 from models.category import Category
 from models.user import User
 from models.product import Product
@@ -24,6 +25,7 @@ from routes.inventory_transactions import router as inventory_transaction_router
 from routes.auth import router as auth_router
 from routes.ml import router as ml_router
 from routes.assistant import router as assistant_router
+from routes.admin import router as admin_router
 
 logger = logging.getLogger(__name__)
 app = FastAPI()
@@ -66,6 +68,11 @@ app.add_middleware(
 )
 
 Base.metadata.create_all(bind=engine)
+ensure_schema()
+
+from admin_provision import bootstrap_admin_from_env
+
+bootstrap_admin_from_env()
 
 app.include_router(auth_router)
 app.include_router(product_router)
@@ -76,6 +83,7 @@ app.include_router(purchase_order_router)
 app.include_router(inventory_transaction_router)
 app.include_router(ml_router)
 app.include_router(assistant_router)
+app.include_router(admin_router)
 
 @app.get("/")
 def home():

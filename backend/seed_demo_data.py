@@ -26,6 +26,7 @@ from models.order import Order
 from models.product import Product
 from models.purchase_order import PurchaseOrder
 from models.supplier import Supplier
+from models.user import User
 from services.inventory import change_stock
 
 TARGET = 100
@@ -245,6 +246,7 @@ def ensure_sales_orders(db: Session, products: list[Product]) -> int:
     if not candidates:
         return 0
 
+    demo_user = db.query(User).order_by(User.id).first()
     created = 0
     for offset in range(needed):
         index = existing + offset + 1
@@ -267,6 +269,13 @@ def ensure_sales_orders(db: Session, products: list[Product]) -> int:
             quantity=quantity,
             total_amount=round(product.price * quantity, 2),
             status="Pending",
+            user_id=demo_user.id if demo_user else None,
+            created_at=datetime.now(timezone.utc)
+            - timedelta(
+                days=(index * 37) % 365,
+                hours=index % 24,
+                minutes=(index * 7) % 60,
+            ),
         )
         db.add(order)
         db.flush()
@@ -330,6 +339,12 @@ def ensure_purchase_orders(
             unit_price=unit_price,
             total_amount=round(unit_price * quantity, 2),
             status="Pending",
+            created_at=datetime.now(timezone.utc)
+            - timedelta(
+                days=(index * 29) % 365,
+                hours=(index * 5) % 24,
+                minutes=(index * 3) % 60,
+            ),
         )
         db.add(purchase_order)
         db.flush()

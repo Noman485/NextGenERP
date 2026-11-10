@@ -18,6 +18,7 @@ the frozen forecasting model or removing existing functionality.
 In scope:
 
 - Authentication and session handling.
+- Administrator authorization, account activation and sales analytics.
 - Products, categories, suppliers, sales orders, purchase orders and inventory
   transactions.
 - Stock deduction, restoration and receiving invariants.
@@ -48,15 +49,18 @@ Risk-based, layered testing:
 | Non-functional | Responsive widths, keyboard, console errors, secret exposure | Browser automation + inspection |
 | Regression | Previously fixed defects | pytest regression suite + catalog IDs |
 
-The 1000-scenario catalog is the traceability layer. It contains distinct test
-intents across twelve modules. It is not 1000 automated tests. A scenario is
-marked `passed` only when it was executed and evidence is recorded.
+The 2000-scenario catalog is the traceability layer. It contains distinct test
+intents across thirteen modules. It is not 2000 automated tests. A scenario is
+marked `passed` only when it was executed and evidence is recorded. The
+1000-scenario voice module is a planning catalog; only scenarios with an exact
+matching browser check are marked passed.
 
 ## 4. Environments
 
 | Environment | Frontend | Backend | Database |
 | --- | --- | --- | --- |
 | Local development | Vite `http://localhost:5173` | FastAPI `http://127.0.0.1:8000` | SQLite file from `DATABASE_URL` |
+| Administrator UI | Vite `/admin/login` and `/admin` | FastAPI `/admin/*` | Same SQLite file |
 | Automated backend tests | n/a | FastAPI TestClient | Temporary SQLite database with foreign keys enabled |
 | Compose (documented) | Built frontend | FastAPI container | PostgreSQL |
 
@@ -70,6 +74,8 @@ Constraints:
 - Headless Edge exposes the Web Speech APIs but cannot grant a real microphone
   permission or provide audio input; voice controls, language payloads and
   spoken-reply state are tested, while real capture remains a manual check.
+- Administrator analytics are tested on SQLite; PostgreSQL aggregation and
+  concurrent administrator changes remain blocked.
 
 ## 5. Test data
 
@@ -88,6 +94,11 @@ Browser checks use the running development workspace:
   assistant reply lists the current low-stock set rather than a fixed name.
 - The inventory history contains the seeded movements and must stay consistent
   with product stock.
+- Administrator checks use a provisioned `ADMIN` account and a disposable
+  `USER` account. The administrator password is generated during provisioning
+  and is not committed.
+- Analytics checks accept the seeded demo spread; they do not assume a fixed
+  revenue total.
 - Checks must not leave the workspace in a broken state; read-only checks are
   preferred, and any created record must be accounted for.
 
@@ -118,12 +129,13 @@ Exit for a release:
 
 Current status (2026-11-11):
 
-- Backend: 48 passed, 1 third-party deprecation warning.
+- Backend: 62 passed, 1 third-party deprecation warning.
 - Build: passed, one chunk-size warning.
-- Catalog: 1000 total, 27 passed, 41 blocked, 932 not_run.
-- Assistant voice/language browser flow passed for the three language options,
-  mic control, auto-speak, localized Hindi/Bengali live answers, Bengali
-  refusal, speaker state and mobile layout; real microphone capture is blocked.
+- Catalog: 2000 total, 80 passed, 41 blocked, 1879 not_run.
+- Administrator browser E2E: 50/50 checks passed, including normal-user 403,
+  all analytics tabs, user deactivation/reactivation and 390 px layout.
+- Mocked voice E2E: 41/41; secure-context E2E: 8/8; support-detection E2E: 4/4.
+- Native assistant language/layout run passed on rerun.
 - Release is **not** fully verified because most catalog scenarios are not yet
   executed and rate limiting is missing.
 
@@ -161,7 +173,18 @@ Browser checks (examples live outside the repo in the working environment):
 ```powershell
 node assistant-test.cjs
 node assistant-voice-test.cjs
+node voice-mock-e2e.cjs
+node voice-secure-context-e2e.cjs
+node voice-support-e2e.cjs
+node admin-e2e.cjs
 node stabilization-check.cjs
+```
+
+Administrator provisioning:
+
+```powershell
+cd backend
+.\venv\Scripts\python.exe create_admin.py --username <name>
 ```
 
 ## 8. Coverage map
@@ -178,6 +201,7 @@ node stabilization-check.cjs
 | Purchase Orders | 120 | Create, validation, transitions, receiving, cancellation, UI, security, concurrency |
 | Demand Forecast | 80 | Display, reorder logic, filters, refresh, model integrity, ERP overlay, accessibility |
 | NextGenERP Assistant | 80 | Allowed/refused scope, live data, help, localization, voice controls, LLM paths, UI, privacy |
+| Voice Assistant | 1000 | Support detection, permissions/errors, locales, lifecycle, transcripts, payloads, synthesis, auto-speak, accessibility, privacy, responsive layout, reliability |
 | Navigation and UI | 50 | Routes, shell, search, 404, accessibility, responsive |
 | Security and API | 50 | Auth requirements, injection, CORS, secrets, XSS, rate limiting |
 
@@ -190,6 +214,9 @@ node stabilization-check.cjs
 | Auth brute force | High | High | Rate limiting and lockout (open) |
 | Assistant leaks workspace data to a provider | Low | High | Opt-in provider, trimmed snapshot, strict prompt, documented privacy note |
 | Assistant answers outside scope | Medium | Medium | Pre-LLM scope refusal and tests |
+| Administrator data leaks password hashes or tokens | Low | High | Safe response schemas; tests assert secrets are absent |
+| Revenue is double-counted or pending is treated as realized | Low | High | Explicit status rules, Python aggregation and API tests |
+| Normal user reaches administrator APIs | Low | High | Database-backed role check on every request; browser and API tests |
 | Browser speech support varies | Medium | Low | Feature-detect, disable controls with an explanation, keep typing available |
 | Wrong-language or mixed-language reply | Low | Medium | Explicit language field, localized engine, language instruction to the LLM |
 | Partial dashboard hides failures | Low | Medium | Per-section unavailable states and banner |
@@ -227,4 +254,6 @@ node stabilization-check.cjs
 | Voice microphone capture | 1 | Headless Edge cannot grant a real microphone permission or supply audio | Run a manual or device-farm check with a real microphone |
 | Cross-browser voice | 1 | Only Edge is installed | Add Firefox/WebKit runners or Playwright browsers |
 | Rate limiting | 6 | Control not implemented | Implement and test limits |
+| Administrator analytics on PostgreSQL | n/a | Tests and live data use SQLite | Run the analytics suite and a seeded dataset against PostgreSQL |
+| Concurrent administrator changes | n/a | Last-admin protection is tested sequentially | Add a PostgreSQL test with two simultaneous deactivation requests |
 | Cross-browser E2E | n/a | Only Edge installed | Add Playwright browsers or another runner |

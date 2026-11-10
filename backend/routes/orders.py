@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -6,6 +8,7 @@ from auth.dependencies import get_current_user
 from database.connection import engine
 from models.order import Order
 from models.product import Product
+from models.user import User
 from schemas.order import OrderCreate, OrderStatusUpdate, OrderUpdate
 from services.inventory import change_stock
 
@@ -31,7 +34,11 @@ def get_db():
 
 
 @router.post("/")
-def create_order(order_data: OrderCreate, db: Session = Depends(get_db)):
+def create_order(
+    order_data: OrderCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     customer_name = order_data.customer_name.strip()
     if not customer_name:
         raise HTTPException(status_code=400, detail="Customer name is required")
@@ -65,6 +72,8 @@ def create_order(order_data: OrderCreate, db: Session = Depends(get_db)):
         quantity=order_data.quantity,
         total_amount=total_amount,
         status="Pending",
+        user_id=current_user.id,
+        created_at=datetime.now(timezone.utc),
     )
 
     db.add(new_order)

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Float, ForeignKey, Integer, String
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, func
 from sqlalchemy.orm import relationship
 
 from database.connection import Base
@@ -14,6 +14,12 @@ class PurchaseOrder(Base):
     unit_price = Column(Float, nullable=False)
     total_amount = Column(Float, nullable=False)
     status = Column(String, default="Pending", nullable=False)
+    created_at = Column(
+        DateTime(timezone=True),
+        nullable=True,
+        server_default=func.now(),
+        index=True,
+    )
 
     supplier = relationship("Supplier")
     product = relationship("Product")

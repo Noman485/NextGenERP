@@ -1,4 +1,5 @@
 import math
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -68,6 +69,7 @@ def create_purchase_order(
         unit_price=purchase_order_data.unit_price,
         total_amount=purchase_order_data.unit_price * purchase_order_data.quantity,
         status="Pending",
+        created_at=datetime.now(timezone.utc),
     )
 
     db.add(new_purchase_order)

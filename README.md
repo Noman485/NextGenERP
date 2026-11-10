@@ -5,7 +5,8 @@ NextGenERP is an inventory and procurement ERP application for managing product 
 ## Current functionality
 
 - **Dashboard:** live catalog/order summaries, an interactive 3D stock snapshot, low-stock and out-of-stock attention lists, pending-order summaries, and shortcuts to operational screens. These are operational metrics, not forecasts.
-- **Authentication:** account registration and sign-in with 30-minute JWT bearer tokens. Passwords are hashed with Argon2id. Tokens are held in browser session storage. All registered accounts currently have equal permissions; there is no default administrator or role-based access control.
+- **Authentication:** account registration and sign-in with 30-minute JWT bearer tokens. Passwords are hashed with Argon2id. Tokens are held in browser session storage. Accounts have either the `USER` or `ADMIN` role; registration always creates a `USER`. Administrator access is checked from the database on every request, not from a token claim.
+- **Administrator area:** a separate `/admin/login` and `/admin` experience with a business overview, sales analytics (daily, monthly, yearly, user, product, inventory and supplier), and account activation controls. Normal users receive HTTP 403 from administrator APIs. There is no default administrator and no hardcoded password.
 - **Catalog:** create, view, update, and delete products, categories, and suppliers, subject to existing relationship protections.
 - **Sales orders:** create and view sales orders, update customer details, and progress orders through `Pending → Confirmed → Shipped → Delivered`. Pending or confirmed orders can be cancelled; cancellation restores stock. Sales order history cannot be deleted.
 - **Purchase orders:** create and view purchase orders and progress them through `Pending → Approved → Ordered → Received`. Receiving adds stock once. Unreceived orders can be cancelled or deleted.
@@ -13,13 +14,15 @@ NextGenERP is an inventory and procurement ERP application for managing product 
 - **API health:** the `/health` endpoint checks database connectivity.
 - **Demand forecasting (ML):** an integrated XGBoost model trained on the Kaggle Store Item Demand dataset produces a 7-day demand forecast and smart reorder recommendations (held-out test WAPE **8.42%**, R² **0.744**). Results are available on the **Forecasting** page and through `GET /ml/insights`. See the [ML integration guide](./docs/ml-integration.md).
 - **In-app assistant:** a read-only assistant that is scoped to NextGenERP and available on every authenticated page. It answers questions about inventory, orders, suppliers, forecasting, navigation and troubleshooting using live workspace data. It supports English, Hindi and Bengali, with optional browser voice input and spoken replies. The built-in engine needs no API key; an OpenAI-compatible provider can be enabled optionally. It cannot create, edit, cancel or delete records. See the [assistant guide](./docs/ai-assistant.md).
+- **Voice reliability:** secure-context detection, asynchronous voice loading, exact/best-match voice selection, interim transcripts, a 15-second silence timeout, localized error guidance and guards against duplicate starts and late results. Unsupported or insecure browsers keep the typed path usable.
 
 ### Not included / pending
 
 - The ML model is trained on the demo dataset (three products) and is not retrained automatically from ERP sales history; see the [ML integration guide](./docs/ml-integration.md) for details.
 - The dashboard search field is a module jump shortcut; it does not search records.
-- User roles, account administration, password reset, and login rate limiting are not implemented.
-- Database schema creation uses SQLAlchemy `create_all`; a versioned migration system is not configured.
+- Password reset, login rate limiting and multi-factor authentication are not implemented.
+- Schema changes use additive, idempotent migrations for SQLite and PostgreSQL; a fully versioned migration framework is not configured.
+- Inventory value in the administrator area is reported at selling price because product cost is not stored.
 
 ## Technology and architecture
 
@@ -84,6 +87,19 @@ Set-Location backend
 
 The script preserves existing records, tops up only the modules that are short, and records stock movements through the same inventory service used by the API. It creates `DEMO-` SKUs, 100 categories, 100 products, 100 suppliers, 100 sales orders, 100 purchase orders and enough inventory history to reach 100 rows. Rerunning it does not duplicate the previous seed.
 
+### Administrator provisioning
+
+There is no default administrator and no hardcoded password. Provision one explicitly:
+
+```powershell
+Set-Location backend
+.\venv\Scripts\python.exe create_admin.py --username <name>
+```
+
+The script prompts for a password, or reads `ADMIN_PASSWORD` when it is set. It creates the account if needed, promotes it to `ADMIN`, and keeps the password out of source control. Alternatively, set `ADMIN_BOOTSTRAP_USERNAME` and `ADMIN_BOOTSTRAP_PASSWORD` before starting the backend to provision an administrator during startup. Remove those variables after the first successful start.
+
+Sign in at <http://localhost:5173/admin/login>. Normal user accounts are rejected there and receive HTTP 403 from `/admin/*` APIs. Rotate the administrator password if the development database is shared.
+
 ## Environment configuration
 
 | Variable | Used by | Purpose |
@@ -91,6 +107,8 @@ The script preserves existing records, tops up only the modules that are short, 
 | `DATABASE_URL` | Backend | Required SQLAlchemy connection URL. The Compose backend builds its internal URL from the PostgreSQL variables below. |
 | `JWT_SECRET_KEY` | Backend | Required unique signing secret, at least 32 characters. Never commit or reuse it. |
 | `CORS_ORIGINS` | Backend | Comma-separated explicit browser origins; do not use `*`. Defaults to local Vite origins. |
+| `ADMIN_BOOTSTRAP_USERNAME` | Backend | Optional first-start administrator username; remove after provisioning. |
+| `ADMIN_BOOTSTRAP_PASSWORD` | Backend | Optional first-start administrator password; remove after provisioning and never commit it. |
 | `POSTGRES_USER` | Compose database | PostgreSQL role name. |
 | `POSTGRES_PASSWORD` | Compose database | PostgreSQL password; use a random value and protect it as a secret. |
 | `POSTGRES_DB` | Compose database | Database name. |
@@ -133,6 +151,8 @@ When running the backend directly for local development, interactive OpenAPI doc
 | `/inventory-transactions/` | Create and list inventory transactions |
 | `/ml/insights` | 7-day demand forecast and smart reorder recommendations |
 | `/assistant/chat` | Project-scoped assistant reply with `language` (`en`, `hi`, `bn`) |
+| `/admin/overview`, `/admin/analytics/*` | Administrator overview and analytics |
+| `/admin/users`, `/admin/users/{user_id}/status` | Safe account listing and activation controls |
 | `/health` | Database-backed readiness check |
 
 Business-resource routes require `Authorization: Bearer <token>`. Registration accepts a username of 3–80 letters/digits/periods/underscores/hyphens and a password of 12–128 characters. There is no default account; register an account through the UI or API.
@@ -155,7 +175,7 @@ npm ci
 npm run build
 ```
 
-The test catalog contains 1000 distinct scenarios across twelve modules. It is a traceability artifact, not 1000 automated tests; a scenario is marked passed only when it was executed and evidence was recorded. Regenerate it with:
+The test catalog contains 2000 distinct scenarios across thirteen modules, including a 1000-scenario voice planning module. It is a traceability artifact, not 2000 automated tests; a scenario is marked passed only when it was executed and evidence was recorded. Regenerate it with:
 
 ```powershell
 python tests\generate_test_cases.py
@@ -178,3 +198,6 @@ For production configuration, secrets, database access, CORS, and HTTPS requirem
 - [ ] Open the Forecasting page and confirm the 7-day demand forecast and reorder recommendations load successfully.
 - [ ] Open the assistant, switch between English, हिन्दी and বাংলা, and confirm the welcome, suggestions and a live low-stock answer follow the selected language.
 - [ ] In a supported browser, grant microphone access, ask a question by voice, and use the speaker button or auto-speak toggle to hear the answer.
+- [ ] Sign in at `/admin/login` with the provisioned administrator account; review the overview and each analytics tab.
+- [ ] Confirm a normal user is rejected at `/admin/login` and receives HTTP 403 from administrator APIs.
+- [ ] Deactivate and reactivate a disposable user from the administrator area; confirm their business records remain.

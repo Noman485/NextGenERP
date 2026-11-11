@@ -47,6 +47,8 @@ const UI_TEXT = {
     stopSpeaking: 'Stop playback',
     autoSpeak: 'Auto-speak answers',
     speechUnsupported: 'Spoken replies are not supported in this browser',
+    speechVoiceMissing:
+      'No {language} voice is installed on this device. Add it in Windows Settings > Time & language > Language & region, then restart the browser. The written answer is still available.',
     thinking: 'Assistant is thinking',
     welcome:
       "Hi! I'm the NextGenERP Assistant. I can answer questions about this workspace using live inventory, order and supplier data. I only cover NextGenERP topics.",
@@ -93,6 +95,8 @@ const UI_TEXT = {
     stopSpeaking: 'प्लेबैक रोकें',
     autoSpeak: 'उत्तर स्वतः सुनें',
     speechUnsupported: 'इस ब्राउज़र में बोलकर उत्तर सुनाना समर्थित नहीं है',
+    speechVoiceMissing:
+      'इस डिवाइस पर {language} की आवाज़ इंस्टॉल नहीं है। Windows सेटिंग्स > समय और भाषा > भाषा और क्षेत्र में इसे जोड़ें, फिर ब्राउज़र फिर से चालू करें। लिखित उत्तर अभी भी उपलब्ध है।',
     thinking: 'सहायक सोच रहा है',
     welcome:
       'नमस्ते! मैं NextGenERP सहायक हूँ। मैं लाइव इन्वेंटरी, ऑर्डर और आपूर्तिकर्ता डेटा से इस वर्कस्पेस के बारे में उत्तर दे सकता हूँ। मैं केवल NextGenERP विषयों में मदद करता हूँ।',
@@ -138,6 +142,8 @@ const UI_TEXT = {
     stopSpeaking: 'প্লেব্যাক বন্ধ করুন',
     autoSpeak: 'উত্তর স্বয়ংক্রিয়ভাবে শুনুন',
     speechUnsupported: 'এই ব্রাউজারে কথা বলে উত্তর শোনানো সমর্থিত নয়',
+    speechVoiceMissing:
+      'এই ডিভাইসে {language} কণ্ঠস্বর ইনস্টল নেই। Windows সেটিংস > সময় ও ভাষা > ভাষা ও অঞ্চলে এটি যোগ করুন, তারপর ব্রাউজার আবার চালু করুন। লিখিত উত্তর এখনও পাওয়া যাচ্ছে।',
     thinking: 'সহায়ক ভাবছে',
     welcome:
       'নমস্কার! আমি NextGenERP সহায়ক। আমি লাইভ ইনভেন্টরি, অর্ডার ও সরবরাহকারী ডেটা ব্যবহার করে এই ওয়ার্কস্পেস সম্পর্কে উত্তর দিতে পারি। আমি শুধু NextGenERP বিষয়ে সাহায্য করি।',
@@ -190,6 +196,11 @@ function canSpeak() {
 
 function speechLocale(language) {
   return LANGUAGES.find((item) => item.code === language)?.speech || 'en-IN';
+}
+
+function voiceMissingMessage(language) {
+  const label = LANGUAGES.find((item) => item.code === language)?.label || language;
+  return UI_TEXT[language].speechVoiceMissing.replace('{language}', label);
 }
 
 const RECOGNITION_TIMEOUT_MS = 15000;
@@ -349,11 +360,18 @@ export default function Assistant() {
     utterance.lang = locale;
     utterance.rate = 0.98;
 
+    let availableVoices = [];
     try {
-      const available = voices.length
+      availableVoices = voices.length
         ? voices
         : window.speechSynthesis.getVoices() || [];
-      const voice = pickVoice(available, locale, language);
+      const voice = pickVoice(availableVoices, locale, language);
+      if (!voice && availableVoices.length > 0 && language !== 'en') {
+        // Speaking Bengali/Hindi text with an English voice is unintelligible.
+        // Explain the missing voice instead of playing the wrong language.
+        setVoiceError(voiceMissingMessage(language));
+        return;
+      }
       if (voice) utterance.voice = voice;
     } catch {
       // Voice selection is best-effort; the default voice still works.
@@ -366,7 +384,9 @@ export default function Assistant() {
     utterance.onerror = (event) => {
       clearIfCurrent();
       const code = event?.error;
-      if (!['interrupted', 'canceled', 'cancelled'].includes(code)) {
+      if (['language-unavailable', 'voice-unavailable'].includes(code)) {
+        setVoiceError(voiceMissingMessage(language));
+      } else if (!['interrupted', 'canceled', 'cancelled'].includes(code)) {
         setVoiceError(copy.speechUnsupported);
       }
     };

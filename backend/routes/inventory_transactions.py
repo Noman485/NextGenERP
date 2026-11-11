@@ -90,3 +90,13 @@ def get_inventory_transactions(db: Session = Depends(get_db)):
         }
         for transaction, product_name in transactions
     ]
+
+
+@router.delete("/{transaction_id}")
+def delete_inventory_transaction(transaction_id: int):
+    """Inventory history is an immutable audit trail."""
+
+    raise HTTPException(
+        status_code=405,
+        detail="Inventory history records cannot be deleted",
+    )

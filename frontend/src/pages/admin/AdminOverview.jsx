@@ -168,6 +168,8 @@ export default function AdminOverview() {
             label="Sales orders by status"
             formatValue={(value) => formatNumber(value)}
             height={230}
+            colorMap={STATUS_COLORS}
+            colorKey="label"
           />
           <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-stone-500">
             {statusSeries.map((item) => (

@@ -1,6 +1,8 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from validation import normalize_email
 
 
 class Credentials(BaseModel):
@@ -10,6 +12,11 @@ class Credentials(BaseModel):
 
 class UserRegistration(Credentials):
     email: str | None = Field(default=None, max_length=255)
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, email: str | None) -> str | None:
+        return normalize_email(email)
 
 
 class UserLogin(BaseModel):

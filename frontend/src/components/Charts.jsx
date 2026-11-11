@@ -137,6 +137,8 @@ export function BarChart({
   formatX = (value) => value,
   height = 240,
   color = '#0f766e',
+  colorMap = null,
+  colorKey = 'label',
 }) {
   const width = 640;
   const padding = { top: 20, right: 16, bottom: 38, left: 52 };
@@ -185,6 +187,9 @@ export function BarChart({
           const barHeight = (value / maxValue) * innerHeight;
           const x = padding.left + index * slot + (slot - barWidth) / 2;
           const y = padding.top + innerHeight - barHeight;
+          // Resolve the colour from the datum's real status value, never from
+          // its position in the array. Unknown categories keep the default.
+          const fill = colorMap?.[item[colorKey]] ?? color;
           return (
             <g key={`${item[xKey]}-${index}`}>
               <rect
@@ -193,7 +198,7 @@ export function BarChart({
                 width={barWidth}
                 height={Math.max(0, barHeight)}
                 rx="3"
-                fill={color}
+                fill={fill}
                 opacity={value === 0 ? 0.2 : 0.9}
               >
                 <title>{`${formatX(item[xKey])}: ${formatValue(value)}`}</title>

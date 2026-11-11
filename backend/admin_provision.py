@@ -18,11 +18,11 @@ from sqlalchemy.orm import Session
 from auth.security import hash_password
 from database.connection import engine
 from models.user import User
+from validation import normalize_email
 
 logger = logging.getLogger(__name__)
 
 USERNAME_PATTERN = re.compile(r"^[A-Za-z0-9_.-]{3,80}$")
-EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 MIN_PASSWORD_LENGTH = 12
 MAX_PASSWORD_LENGTH = 128
 
@@ -31,17 +31,6 @@ MAX_PASSWORD_LENGTH = 128
 class ProvisionResult:
     user: User
     created: bool
-
-
-def normalize_email(email: str | None) -> str | None:
-    if email is None:
-        return None
-    cleaned = email.strip().lower()
-    if not cleaned:
-        return None
-    if len(cleaned) > 255 or not EMAIL_PATTERN.match(cleaned):
-        raise ValueError("Enter a valid email address")
-    return cleaned
 
 
 def validate_credentials(username: str, password: str) -> str:

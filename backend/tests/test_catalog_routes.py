@@ -182,3 +182,54 @@ def test_supplier_rejects_invalid_name_lead_time_and_rating(client):
         assert client.post("/suppliers/", json=payload).status_code == 422
 
     assert client.get("/suppliers/").json() == []
+
+
+def test_supplier_rejects_invalid_email_and_phone(client):
+    base = {"name": "Contact supplier", "lead_time_days": 0}
+    for email in (
+        "not-an-email",
+        "missing-at.example.com",
+        "user@example",
+        "user@example.c",
+        "user @example.com",
+        "user..name@example.com",
+        "user@-example.com",
+    ):
+        response = client.post("/suppliers/", json={**base, "email": email})
+        assert response.status_code == 422, email
+
+    for phone in (
+        "call-me",
+        "12345",
+        "1234567890123456",
+        "+91-ABC-12345",
+        "1234567-",
+    ):
+        response = client.post("/suppliers/", json={**base, "phone": phone})
+        assert response.status_code == 422, phone
+
+    assert client.get("/suppliers/").json() == []
+
+
+def test_supplier_normalizes_valid_email_and_accepts_phone_formats(client):
+    response = client.post(
+        "/suppliers/",
+        json={
+            "name": "Contact supplier",
+            "email": "  Sales@Example.COM ",
+            "phone": " +91-90000-00000 ",
+            "lead_time_days": 0,
+        },
+    )
+    assert response.status_code == 200, response.text
+    supplier = response.json()
+    assert supplier["email"] == "sales@example.com"
+    assert supplier["phone"] == "+91-90000-00000"
+
+    for phone in ("5550100", "(022) 5550-1234", "+1 (555) 010-9999"):
+        updated = client.put(
+            f"/suppliers/{supplier['id']}",
+            json={"name": "Contact supplier", "phone": phone, "lead_time_days": 0},
+        )
+        assert updated.status_code == 200, phone
+        assert updated.json()["phone"] == phone

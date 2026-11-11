@@ -26,9 +26,25 @@ from routes.auth import router as auth_router
 from routes.ml import router as ml_router
 from routes.assistant import router as assistant_router
 from routes.admin import router as admin_router
+from security_controls import apply_security_headers
 
 logger = logging.getLogger(__name__)
-app = FastAPI()
+_environment = os.getenv("ENVIRONMENT", "development").strip().lower()
+_docs_enabled = _environment not in {"production", "prod"} or os.getenv(
+    "ENABLE_API_DOCS", ""
+).strip().lower() in {"1", "true", "yes"}
+app = FastAPI(
+    docs_url="/docs" if _docs_enabled else None,
+    redoc_url="/redoc" if _docs_enabled else None,
+    openapi_url="/openapi.json" if _docs_enabled else None,
+)
+
+
+@app.middleware("http")
+async def security_headers_middleware(request: Request, call_next):
+    response = await call_next(request)
+    apply_security_headers(request, response)
+    return response
 
 
 @app.exception_handler(RequestValidationError)

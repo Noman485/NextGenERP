@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { apiFetch } from '../api';
+import { MAX_EMAIL_LENGTH, MAX_PHONE_LENGTH, isValidEmail, isValidPhone } from '../validation';
 
 const SUPPLIERS_URL = '/suppliers/';
 const EMPTY_SUPPLIER_FORM = {
@@ -158,6 +159,12 @@ export default function Suppliers() {
     event.preventDefault();
     const errors = {};
     if (!supplierForm.name.trim()) errors.name = 'Supplier name is required.';
+    if (supplierForm.email.trim() && !isValidEmail(supplierForm.email)) {
+      errors.email = 'Enter a valid email address, for example name@company.com.';
+    }
+    if (supplierForm.phone.trim() && !isValidPhone(supplierForm.phone)) {
+      errors.phone = 'Enter a valid phone number with 7 to 15 digits, for example +91-90000-00000.';
+    }
     const leadTime = supplierForm.lead_time_days.trim();
     if (leadTime && (!Number.isInteger(Number(leadTime)) || Number(leadTime) < 0)) {
       errors.lead_time_days = 'Lead time must be a whole number of 0 or more.';
@@ -492,6 +499,8 @@ export default function Suppliers() {
                     value={supplierForm[name]}
                     onChange={updateSupplierField}
                     required={name === 'name'}
+                    maxLength={name === 'email' ? MAX_EMAIL_LENGTH : name === 'phone' ? MAX_PHONE_LENGTH : undefined}
+                    inputMode={name === 'phone' ? 'tel' : undefined}
                     min={type === 'number' && name === 'lead_time_days' ? 0 : undefined}
                     step={name === 'lead_time_days' ? 1 : 'any'}
                     autoComplete={name === 'name' ? 'organization' : name === 'email' ? 'email' : name === 'phone' ? 'tel' : 'off'}

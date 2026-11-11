@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -34,7 +34,11 @@ def validate_category(db: Session, name: str, category_id: int | None = None) ->
 
 
 @router.post("/")
-def create_category(name: str, description: str = "", db: Session = Depends(get_db)):
+def create_category(
+    name: str = Query(..., min_length=1, max_length=120),
+    description: str = "",
+    db: Session = Depends(get_db),
+):
     new_category = Category(
         name=validate_category(db, name),
         description=description
@@ -62,7 +66,7 @@ def get_categories(db: Session = Depends(get_db)):
 @router.put("/{category_id}")
 def update_category(
     category_id: int,
-    name: str,
+    name: str = Query(..., min_length=1, max_length=120),
     description: str = "",
     db: Session = Depends(get_db),
 ):

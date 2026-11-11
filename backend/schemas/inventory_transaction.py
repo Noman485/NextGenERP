@@ -8,7 +8,7 @@ class InventoryTransactionCreate(BaseModel):
     product_id: StrictInt
     transaction_type: Literal["Stock In", "Stock Out"]
     quantity: StrictInt = Field(gt=0)
-    reason: str = Field(min_length=1)
+    reason: str = Field(min_length=1, max_length=500)
 
     @field_validator("reason")
     @classmethod

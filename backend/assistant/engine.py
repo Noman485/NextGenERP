@@ -83,6 +83,92 @@ def _find_supplier(value: str, suppliers):
     return max(matches, key=lambda item: item[0])[1] if matches else None
 
 
+_WRITE_VERBS = {
+    "add",
+    "approve",
+    "assign",
+    "cancel",
+    "change",
+    "create",
+    "deactivate",
+    "delete",
+    "disable",
+    "enable",
+    "mark",
+    "make",
+    "promote",
+    "receive",
+    "remove",
+    "reset",
+    "set",
+    "ship",
+    "update",
+}
+_WRITE_OBJECTS = {
+    "account",
+    "accounts",
+    "admin",
+    "administrator",
+    "administrators",
+    "category",
+    "categories",
+    "inventory",
+    "item",
+    "items",
+    "order",
+    "orders",
+    "price",
+    "prices",
+    "product",
+    "products",
+    "purchase",
+    "record",
+    "records",
+    "role",
+    "roles",
+    "stock",
+    "supplier",
+    "suppliers",
+    "user",
+    "users",
+}
+
+
+def _is_write_instruction(value: str) -> bool:
+    """Return True for imperative requests that would mutate business data.
+
+    The assistant is read-only. Recognising the instruction up front keeps the
+    local answer engine (and any configured provider) from treating a write
+    request as a documentation question.
+    """
+
+    words = re.findall(r"[a-z0-9]+", value)
+    if not words:
+        return False
+    first = words[1] if words[0] in {"please", "now"} and len(words) > 1 else words[0]
+    if first not in _WRITE_VERBS:
+        return False
+    return any(word in _WRITE_OBJECTS for word in words)
+
+
+_SQL_PATTERNS = (
+    r"\bselect\b[^\n]{0,120}\bfrom\b",
+    r"\binsert\b[^\n]{0,80}\binto\b",
+    r"\bupdate\b[^\n]{0,120}\bset\b",
+    r"\bdelete\b[^\n]{0,80}\bfrom\b",
+    r"\bdrop\b\s+\btable\b",
+    r"\balter\b\s+\btable\b",
+    r"\bunion\b",
+    r"\bsqlite_master\b",
+)
+
+
+def _is_sql_instruction(value: str) -> bool:
+    """Return True for requests that ask the assistant to run SQL directly."""
+
+    return any(re.search(pattern, value) for pattern in _SQL_PATTERNS)
+
+
 def _is_project_related(value: str, snapshot: dict, language: str) -> bool:
     if any(term in value for term in domain_terms(language)):
         return True
@@ -538,11 +624,20 @@ def answer_chat(message: str, db, history=None, language: str = "en") -> dict:
     if _is_greeting(value, language) and not knowledge_entry:
         return _result(intro_text(language), language)
 
-    if not (
-        knowledge_entry
-        or doc_match
-        or _is_project_related(value, snapshot, language)
-    ):
+    # The assistant cannot mutate business records or execute SQL. Refuse those
+    # instructions before documentation or provider lookup so they can never be
+    # mistaken for a how-to question or executed by a future tool integration.
+    if _is_write_instruction(value) or _is_sql_instruction(value):
+        return _result(refusal_text(language), language)
+
+    # Documentation lookup is only a supporting source for questions that are
+    # already inside the ERP domain. Treating any keyword overlap with the
+    # project docs as sufficient scope would let off-topic prompts (news,
+    # recipes, general coding) receive project text instead of a refusal.
+    # Project-related prompts still reach the live-data answer engine even when
+    # they do not match a documentation entry.
+    project_related = _is_project_related(value, snapshot, language)
+    if not (knowledge_entry or project_related):
         return _result(refusal_text(language), language)
 
     if is_configured():

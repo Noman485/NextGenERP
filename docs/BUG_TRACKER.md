@@ -32,13 +32,13 @@ Severity values: `critical`, `high`, `medium`, `low`.
 | BUG-029 | Medium | Voice | Late recognition results after stop or panel close could still submit a message | Result handlers did not check whether the session was still current | Abort on stop/close and ignore results whose recognition object is no longer current | Mocked voice E2E: late result after stop and after close were both ignored |
 | BUG-030 | Medium | Administrator | Legacy demo orders had no timestamps, so daily/monthly analytics were empty | The analytics columns were added after the demo data was created | Added an idempotent backfill that only touches `@example.test` demo rows | Live database: 100 orders spread over the last year; real rows untouched |
 | BUG-031 | Medium | Administrator | Existing databases lacked the role, active-status and timestamp columns | The original schema used `create_all` with no migration step | Added additive, idempotent migrations for SQLite and PostgreSQL and called `ensure_schema()` at startup | Live database migrated after a backup; backend suite passes |
+| BUG-015 | High | Security | No rate limiting on login, registration or assistant chat | Credential stuffing, spam accounts and LLM cost abuse were possible | Added `security_controls.py` with per-IP, per-account and per-user fixed windows; 429 responses include `Retry-After`; forwarded headers are not trusted | Security suite `SEC-0741`–`SEC-0800` (60/60) |
+| BUG-016 | Medium | Security | No Content-Security-Policy or baseline security headers | Stored XSS impact was larger than necessary and framing/MIME sniffing were unrestricted | Added FastAPI header middleware, TLS-only HSTS, and matching nginx headers/CSP for the SPA | Security suite `SEC-0801`–`SEC-0840` (40/40) |
 
 ## Open
 
 | ID | Severity | Area | Issue | Impact | Suggested action |
 | --- | --- | --- | --- | --- | --- |
-| BUG-015 | High | Security | No rate limiting on login, registration or assistant chat | Credential stuffing, spam accounts and LLM cost abuse are possible | Add per-IP and per-account limits with 429 responses and tests |
-| BUG-016 | Medium | Security | No Content-Security-Policy header | Stored XSS impact is larger than necessary | Add CSP and baseline security headers in FastAPI middleware |
 | BUG-017 | Medium | Forecasting | Three.js chunk is 694.91 kB and triggers Vite's 500 kB warning | Slower first load on weak networks | Split the chart/warehouse code further or ship a 2D fallback |
 | BUG-018 | Medium | Testing | No frontend unit/component test runner | UI regressions depend on ad-hoc browser scripts | Add Vitest + Testing Library and commit the E2E scripts |
 | BUG-019 | Medium | Data | Large product and inventory-history lists are not paginated | Rendering cost grows with data volume | Add server-side pagination or virtualization |
@@ -57,7 +57,7 @@ Severity values: `critical`, `high`, `medium`, `low`.
 | --- | --- | --- | --- |
 | BLK-001 | Inventory/Sales/Purchase concurrency | Tests run on SQLite, where `with_for_update()` is a no-op | PostgreSQL service and concurrent test harness |
 | BLK-002 | External LLM provider | No provider key is configured | A test key and a mock/live OpenAI-compatible endpoint |
-| BLK-003 | Rate limiting | The control does not exist yet | Implement BUG-015 first |
+| BLK-003 | Rate limiting across workers | The limiter is in-process; the single-process behavior is tested, but multiple backend workers would each keep an independent window | Shared counter store (Redis/PostgreSQL) plus a multi-worker load test |
 | BLK-004 | Cross-browser E2E | Only headless Edge is installed | Firefox/WebKit runners or Playwright browsers |
 | BLK-005 | Voice microphone capture | Headless Edge cannot grant a real microphone permission or supply audio input | Manual or device-farm check with a real microphone |
 | BLK-006 | Cross-browser voice | Web Speech support and voice availability differ by browser | Test Firefox/Safari or document supported browsers |

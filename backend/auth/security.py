@@ -49,9 +49,19 @@ def decode_access_token(token: str) -> int:
             options={"require": ["sub", "exp"]},
         )
         subject = payload.get("sub")
-        if not isinstance(subject, str) or not subject.isdecimal():
+        if (
+            not isinstance(subject, str)
+            or not subject.isascii()
+            or not subject.isdigit()
+        ):
             raise jwt.InvalidTokenError("Invalid token subject")
-        return int(subject)
+        user_id = int(subject)
+        # Keep database lookups inside the signed 64-bit integer range used by
+        # both SQLite and PostgreSQL. A syntactically valid but absurd subject
+        # must be rejected as a bad token, not allowed to reach the driver.
+        if user_id < 1 or user_id > 2**63 - 1:
+            raise jwt.InvalidTokenError("Invalid token subject")
+        return user_id
     except HTTPException:
         raise
     except jwt.InvalidTokenError as error:

@@ -47,6 +47,31 @@ def test_sales_order_reduces_stock_and_checks_product_and_quantity(
     assert opening_stock["new_stock"] == 5
 
 
+def test_sales_order_rejects_invalid_customer_email(client, create_product):
+    product = create_product(stock_quantity=5)
+    for email in (
+        "not-an-email",
+        "missing-at.example.com",
+        "user@example",
+        "user@example.c",
+        "user @example.com",
+        "user..name@example.com",
+    ):
+        response = client.post(
+            "/orders/",
+            json={
+                "customer_name": "Test customer",
+                "customer_email": email,
+                "product_id": product["id"],
+                "quantity": 1,
+            },
+        )
+        assert response.status_code == 422, email
+
+    assert client.get(f"/products/{product['id']}").json()["stock_quantity"] == 5
+    assert client.get("/orders/").json() == []
+
+
 def test_sales_order_valid_transitions_and_rejects_invalid_jumps(
     client,
     create_product,

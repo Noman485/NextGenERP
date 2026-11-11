@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '../api';
+import { isValidEmail } from '../validation';
 
 const ORDERS_URL = '/orders/';
 const PRODUCTS_URL = '/products/';
@@ -209,7 +210,7 @@ export default function SalesOrders() {
     if (!orderForm.customer_name.trim()) {
       validationErrors.customer_name = 'Customer name is required.';
     }
-    if (orderForm.customer_email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(orderForm.customer_email.trim())) {
+    if (orderForm.customer_email.trim() && !isValidEmail(orderForm.customer_email)) {
       validationErrors.customer_email = 'Enter a valid email address.';
     }
     if (!orderForm.product_id) {
@@ -529,6 +530,7 @@ export default function SalesOrders() {
                 value={orderForm.customer_email}
                 onChange={updateOrderField}
                 autoComplete="email"
+                maxLength={255}
                 aria-invalid={Boolean(formErrors.customer_email)}
                 aria-describedby={formErrors.customer_email ? 'order-customer-email-error' : undefined}
                 className={`w-full rounded-md border bg-white px-3 py-2.5 text-sm text-stone-900 shadow-sm outline-none transition focus:ring-2 ${

@@ -56,6 +56,38 @@ def test_registration_rejects_duplicate_and_invalid_credentials(
     assert short_password not in response.text
 
 
+def test_registration_rejects_invalid_email_and_normalizes_valid_one(
+    unauthenticated_client,
+):
+    for email in (
+        "not-an-email",
+        "missing-at.example.com",
+        "user@example",
+        "user@example.c",
+        "user @example.com",
+    ):
+        response = unauthenticated_client.post(
+            "/auth/register",
+            json={
+                "username": "email-user",
+                "password": "long-test-password-123",
+                "email": email,
+            },
+        )
+        assert response.status_code == 422, email
+
+    response = unauthenticated_client.post(
+        "/auth/register",
+        json={
+            "username": "email-user",
+            "password": "long-test-password-123",
+            "email": "  Person@Example.COM ",
+        },
+    )
+    assert response.status_code == 201, response.text
+    assert response.json()["user"]["email"] == "person@example.com"
+
+
 def test_login_validates_credentials_and_token(unauthenticated_client):
     credentials = {"username": "login-user", "password": "long-test-password-123"}
     assert unauthenticated_client.post("/auth/register", json=credentials).status_code == 201

@@ -1,5 +1,6 @@
 import os
 import shutil
+import subprocess
 import tempfile
 from pathlib import Path
 
@@ -12,6 +13,15 @@ _TEST_DATABASE_DIR = Path(tempfile.mkdtemp(prefix="nextgenerp-backend-tests-"))
 _TEST_DATABASE_PATH = _TEST_DATABASE_DIR / "test.db"
 os.environ["DATABASE_URL"] = f"sqlite:///{_TEST_DATABASE_PATH.as_posix()}"
 os.environ["JWT_SECRET_KEY"] = "test-only-secret-key-never-use-outside-tests"
+os.environ["SECURITY_RATE_LIMIT_ENABLED"] = "0"
+os.environ["ENVIRONMENT"] = "test"
+os.environ["CORS_ORIGINS"] = (
+    "http://localhost:5173,http://localhost:8080,"
+    "http://127.0.0.1:8080,https://erp.example.com"
+)
+# Never let a developer's shell key turn tests into real provider calls.
+os.environ["ASSISTANT_LLM_API_KEY"] = ""
+os.environ["OPENAI_API_KEY"] = ""
 
 from database.connection import Base, engine
 
@@ -138,6 +148,29 @@ def create_supplier(client):
         return response.json()
 
     return create
+
+
+@pytest.fixture(scope="session")
+def frontend_dist():
+    """Return the built frontend assets, building them once when absent.
+
+    Artifact checks (source maps, bundled secrets) inspect the real production
+    build rather than a mock. The build is cached for the whole test session.
+    """
+
+    dist = Path(__file__).resolve().parents[2] / "frontend" / "dist"
+    if not dist.is_dir():
+        npm = shutil.which("npm")
+        assert npm, "npm is required to build frontend/dist for artifact checks"
+        result = subprocess.run(
+            [npm, "run", "build"],
+            cwd=dist.parent,
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+        assert result.returncode == 0, result.stderr[-2000:]
+    return dist
 
 
 @pytest.fixture(scope="session", autouse=True)

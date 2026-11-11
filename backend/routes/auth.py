@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -15,6 +15,7 @@ from auth.security import (
 from database.connection import engine
 from models.user import User
 from schemas.auth import TokenResponse, UserLogin, UserRegistration, UserResponse
+from security_controls import check_rate_limit, client_ip
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -25,8 +26,18 @@ def get_db():
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
-def register(user_data: UserRegistration, db: Session = Depends(get_db)):
-    username = user_data.username.lower()
+def register(
+    user_data: UserRegistration,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    check_rate_limit(request, "register_ip")
+    check_rate_limit(
+        request,
+        "register",
+        identity=f"{client_ip(request)}:{user_data.username.strip().lower()}",
+    )
+    username = user_data.username.strip().lower()
     try:
         email = normalize_email(user_data.email)
     except ValueError as error:
@@ -79,10 +90,20 @@ def register(user_data: UserRegistration, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(user_data: UserLogin, db: Session = Depends(get_db)):
+def login(
+    user_data: UserLogin,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    check_rate_limit(request, "login_ip")
+    check_rate_limit(
+        request,
+        "login",
+        identity=f"{client_ip(request)}:{user_data.username.strip().lower()}",
+    )
     user = (
         db.query(User)
-        .filter(User.username == user_data.username.lower())
+        .filter(User.username == user_data.username.strip().lower())
         .first()
     )
     hashed_password = user.password_hash if user is not None else DUMMY_PASSWORD_HASH

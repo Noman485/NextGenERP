@@ -1,5 +1,7 @@
-import os
 import logging
+import os
+import re
+import uuid
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,7 +11,9 @@ from sqlalchemy import text
 
 from database.connection import Base, engine
 from database.migrations import ensure_schema
+from models.audit_log import AuditLog
 from models.category import Category
+from models.refresh_token import RefreshToken
 from models.user import User
 from models.product import Product
 from models.supplier import Supplier
@@ -27,8 +31,10 @@ from routes.ml import router as ml_router
 from routes.assistant import router as assistant_router
 from routes.admin import router as admin_router
 from security_controls import apply_security_headers
+from services.audit import reset_request_id, set_request_id
 
 logger = logging.getLogger(__name__)
+_REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9._-]{8,64}$")
 _environment = os.getenv("ENVIRONMENT", "development").strip().lower()
 _docs_enabled = _environment not in {"production", "prod"} or os.getenv(
     "ENABLE_API_DOCS", ""
@@ -47,8 +53,26 @@ async def security_headers_middleware(request: Request, call_next):
     return response
 
 
+@app.middleware("http")
+async def request_id_middleware(request: Request, call_next):
+    """Attach a request id to the request, audit trail and response headers."""
+
+    incoming = request.headers.get("x-request-id", "")
+    request_id = (
+        incoming if _REQUEST_ID_PATTERN.fullmatch(incoming) else uuid.uuid4().hex
+    )
+    request.state.request_id = request_id
+    token = set_request_id(request_id)
+    try:
+        response = await call_next(request)
+    finally:
+        reset_request_id(token)
+    response.headers["X-Request-ID"] = request_id
+    return response
+
+
 @app.exception_handler(RequestValidationError)
-async def validation_error_handler(_request: Request, error: RequestValidationError):
+async def validation_error_handler(request: Request, error: RequestValidationError):
     return JSONResponse(
         status_code=422,
         content={
@@ -59,7 +83,8 @@ async def validation_error_handler(_request: Request, error: RequestValidationEr
                     "type": issue["type"],
                 }
                 for issue in error.errors()
-            ]
+            ],
+            "request_id": getattr(request.state, "request_id", None),
         },
     )
 
@@ -80,7 +105,8 @@ app.add_middleware(
     allow_origins=cors_origins,
     allow_credentials=False,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
+    expose_headers=["X-Request-ID"],
 )
 
 Base.metadata.create_all(bind=engine)

@@ -1,5 +1,11 @@
 # NextGenERP Security Test Catalog
 
+> Phase 2 note: 18 catalog cases that were marked `not_implemented` in this
+> catalog are now implemented and verified by `backend/tests/test_audit_logging.py`,
+> `backend/tests/test_token_security.py` and `backend/tests/test_shared_rate_limit.py`.
+> See `SECURITY_TEST_REPORT.md` Section 10. The catalog rows remain as the
+> Phase 1 baseline.
+
 Date: 2026-11-11
 
 Authoritative source: `tests/security_spec.py`. This document is generated from that file; do not hand-edit case rows.

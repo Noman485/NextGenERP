@@ -13,7 +13,7 @@ import Forecasting from './pages/Forecasting';
 import { Icon } from './components/Icons';
 import ErrorBoundary from './components/ErrorBoundary';
 import Assistant from './components/Assistant';
-import { apiFetch } from './api';
+import { apiFetch, logoutSession, setSessionTokens } from './api';
 
 const navigation = [
   { name: 'Dashboard', path: '/', icon: 'dashboard', keywords: ['home', 'overview'] },
@@ -133,14 +133,14 @@ function App() {
     };
   }, [token]);
 
-  function handleAuthenticated(accessToken, authenticatedUser) {
-    sessionStorage.setItem('access_token', accessToken);
+  function handleAuthenticated(accessToken, refreshToken, authenticatedUser) {
+    setSessionTokens(accessToken, refreshToken);
     setUser(authenticatedUser ?? null);
     setToken(accessToken);
   }
 
   function handleLogout() {
-    sessionStorage.removeItem('access_token');
+    logoutSession();
     setUser(null);
     setToken(null);
   }

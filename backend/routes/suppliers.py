@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -6,7 +6,9 @@ from auth.dependencies import get_current_user
 from database.connection import engine
 from models.purchase_order import PurchaseOrder
 from models.supplier import Supplier
+from models.user import User
 from schemas.supplier import SupplierCreate
+from services.audit import record_audit, supplier_state
 
 
 router = APIRouter(
@@ -22,7 +24,12 @@ def get_db():
 
 
 @router.post("/")
-def create_supplier(supplier_data: SupplierCreate, db: Session = Depends(get_db)):
+def create_supplier(
+    supplier_data: SupplierCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     new_supplier = Supplier(
         name=supplier_data.name,
         email=supplier_data.email,
@@ -34,6 +41,16 @@ def create_supplier(supplier_data: SupplierCreate, db: Session = Depends(get_db)
 
     db.add(new_supplier)
     try:
+        db.flush()
+        record_audit(
+            db,
+            action="supplier.create",
+            entity_type="supplier",
+            entity_id=new_supplier.id,
+            actor=current_user,
+            after=supplier_state(new_supplier),
+            request=request,
+        )
         db.commit()
     except SQLAlchemyError as error:
         db.rollback()
@@ -64,19 +81,32 @@ def get_supplier(supplier_id: int, db: Session = Depends(get_db)):
 def update_supplier(
     supplier_id: int,
     supplier_data: SupplierCreate,
+    request: Request,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     supplier = db.query(Supplier).filter(Supplier.id == supplier_id).first()
 
     if not supplier:
         raise HTTPException(status_code=404, detail="Supplier not found")
 
+    before = supplier_state(supplier)
     supplier.name = supplier_data.name
     supplier.email = supplier_data.email
     supplier.phone = supplier_data.phone
     supplier.address = supplier_data.address
     supplier.lead_time_days = supplier_data.lead_time_days
     supplier.performance_rating = supplier_data.performance_rating
+    record_audit(
+        db,
+        action="supplier.update",
+        entity_type="supplier",
+        entity_id=supplier.id,
+        actor=current_user,
+        before=before,
+        after=supplier_state(supplier),
+        request=request,
+    )
 
     try:
         db.commit()
@@ -91,7 +121,12 @@ def update_supplier(
 
 
 @router.delete("/{supplier_id}")
-def delete_supplier(supplier_id: int, db: Session = Depends(get_db)):
+def delete_supplier(
+    supplier_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     supplier = (
         db.query(Supplier)
         .filter(Supplier.id == supplier_id)
@@ -108,6 +143,15 @@ def delete_supplier(supplier_id: int, db: Session = Depends(get_db)):
             detail="Supplier cannot be deleted because it is referenced by purchase orders",
         )
 
+    record_audit(
+        db,
+        action="supplier.delete",
+        entity_type="supplier",
+        entity_id=supplier.id,
+        actor=current_user,
+        before=supplier_state(supplier),
+        request=request,
+    )
     db.delete(supplier)
     try:
         db.commit()

@@ -1,11 +1,32 @@
-from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, func
+from sqlalchemy import (
+    CheckConstraint,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    func,
+)
 from sqlalchemy.orm import relationship
 
 from database.connection import Base
 
+ORDER_STATUSES = ("Pending", "Confirmed", "Shipped", "Delivered", "Cancelled")
+
 
 class Order(Base):
     __tablename__ = "orders"
+    __table_args__ = (
+        CheckConstraint("quantity > 0", name="ck_orders_quantity_positive"),
+        CheckConstraint(
+            "total_amount >= 0", name="ck_orders_total_non_negative"
+        ),
+        CheckConstraint(
+            "status IN ('Pending', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled')",
+            name="ck_orders_status_valid",
+        ),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     customer_name = Column(String, nullable=False)

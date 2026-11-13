@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -10,6 +10,7 @@ from models.order import Order
 from models.product import Product
 from models.user import User
 from schemas.order import OrderCreate, OrderStatusUpdate, OrderUpdate
+from services.audit import order_state, record_audit
 from services.inventory import change_stock
 
 
@@ -36,6 +37,7 @@ def get_db():
 @router.post("/")
 def create_order(
     order_data: OrderCreate,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -86,6 +88,15 @@ def create_order(
             order_data.quantity,
             f"Sales order #{new_order.id} created",
         )
+        record_audit(
+            db,
+            action="order.create",
+            entity_type="order",
+            entity_id=new_order.id,
+            actor=current_user,
+            after=order_state(new_order),
+            request=request,
+        )
         db.commit()
     except SQLAlchemyError:
         db.rollback()
@@ -113,7 +124,9 @@ def get_order(order_id: int, db: Session = Depends(get_db)):
 def update_order(
     order_id: int,
     order_data: OrderUpdate,
+    request: Request,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     order = db.query(Order).filter(Order.id == order_id).first()
 
@@ -124,8 +137,19 @@ def update_order(
     if not customer_name:
         raise HTTPException(status_code=400, detail="Customer name is required")
 
+    before = order_state(order)
     order.customer_name = customer_name
     order.customer_email = (order_data.customer_email or "").strip() or None
+    record_audit(
+        db,
+        action="order.update",
+        entity_type="order",
+        entity_id=order.id,
+        actor=current_user,
+        before=before,
+        after=order_state(order),
+        request=request,
+    )
 
     try:
         db.commit()
@@ -140,7 +164,9 @@ def update_order(
 def update_order_status(
     order_id: int,
     status_data: OrderStatusUpdate,
+    request: Request,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     order = (
         db.query(Order)
@@ -162,6 +188,7 @@ def update_order_status(
             detail=f"Cannot change sales order status from {order.status} to {status_data.status}",
         )
 
+    before = order_state(order)
     if status_data.status == "Cancelled":
         product = (
             db.query(Product)
@@ -187,6 +214,16 @@ def update_order_status(
         )
 
     order.status = status_data.status
+    record_audit(
+        db,
+        action="order.cancel" if order.status == "Cancelled" else "order.status_change",
+        entity_type="order",
+        entity_id=order.id,
+        actor=current_user,
+        before=before,
+        after=order_state(order),
+        request=request,
+    )
     try:
         db.commit()
     except SQLAlchemyError:

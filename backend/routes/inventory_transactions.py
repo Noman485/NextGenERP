@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -6,10 +6,12 @@ from auth.dependencies import get_current_user
 from database.connection import engine
 from models.inventory_transaction import InventoryTransaction
 from models.product import Product
+from models.user import User
 from schemas.inventory_transaction import (
     InventoryTransactionCreate,
     InventoryTransactionHistory,
 )
+from services.audit import inventory_state, record_audit
 from services.inventory import change_stock
 
 
@@ -28,7 +30,9 @@ def get_db():
 @router.post("/", response_model=InventoryTransactionHistory)
 def create_inventory_transaction(
     transaction_data: InventoryTransactionCreate,
+    request: Request,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     product = (
         db.query(Product)
@@ -48,6 +52,16 @@ def create_inventory_transaction(
     )
 
     try:
+        db.flush()
+        record_audit(
+            db,
+            action="inventory.adjust",
+            entity_type="inventory_transaction",
+            entity_id=transaction.id,
+            actor=current_user,
+            after=inventory_state(transaction),
+            request=request,
+        )
         db.commit()
     except SQLAlchemyError:
         db.rollback()

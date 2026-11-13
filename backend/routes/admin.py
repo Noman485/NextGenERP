@@ -1,15 +1,17 @@
 from datetime import datetime, timezone
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 
 from auth.dependencies import require_admin
 from database.connection import engine
+from models.audit_log import AuditLog
 from models.order import Order
 from models.user import User
 from schemas.admin import UserStatusUpdate
 from services import analytics
+from services.audit import record_audit, user_state
 
 router = APIRouter(
     prefix="/admin",
@@ -192,6 +194,7 @@ def admin_user_detail(user_id: int, db: Session = Depends(get_db)):
 def admin_set_user_status(
     user_id: int,
     payload: UserStatusUpdate,
+    request: Request,
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin),
 ):
@@ -217,7 +220,20 @@ def admin_set_user_status(
                 detail="At least one active administrator account is required",
             )
 
+    before = user_state(user)
     user.is_active = payload.is_active
+    record_audit(
+        db,
+        action=(
+            "admin.user_activate" if payload.is_active else "admin.user_deactivate"
+        ),
+        entity_type="user",
+        entity_id=user.id,
+        actor=admin,
+        before=before,
+        after=user_state(user),
+        request=request,
+    )
     db.commit()
     db.refresh(user)
     return {
@@ -227,4 +243,52 @@ def admin_set_user_status(
         "role": user.role or "USER",
         "is_active": bool(user.is_active),
         "created_at": user.created_at.isoformat() if user.created_at else None,
+    }
+
+
+@router.get("/audit-logs")
+def admin_audit_logs(
+    action: str | None = Query(None, max_length=80),
+    entity_type: str | None = Query(None, max_length=40),
+    actor_user_id: int | None = Query(None, ge=1),
+    outcome: Literal["success", "failure", "denied"] | None = None,
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+):
+    query = db.query(AuditLog)
+    if action:
+        query = query.filter(AuditLog.action == action)
+    if entity_type:
+        query = query.filter(AuditLog.entity_type == entity_type)
+    if actor_user_id is not None:
+        query = query.filter(AuditLog.actor_user_id == actor_user_id)
+    if outcome:
+        query = query.filter(AuditLog.outcome == outcome)
+
+    total = query.count()
+    entries = (
+        query.order_by(AuditLog.id.desc()).offset(offset).limit(limit).all()
+    )
+    return {
+        "total": total,
+        "items": [
+            {
+                "id": entry.id,
+                "actor_user_id": entry.actor_user_id,
+                "actor_username": entry.actor_username,
+                "action": entry.action,
+                "entity_type": entry.entity_type,
+                "entity_id": entry.entity_id,
+                "outcome": entry.outcome,
+                "request_id": entry.request_id,
+                "ip_address": entry.ip_address,
+                "before": entry.before_values,
+                "after": entry.after_values,
+                "created_at": (
+                    entry.created_at.isoformat() if entry.created_at else None
+                ),
+            }
+            for entry in entries
+        ],
     }

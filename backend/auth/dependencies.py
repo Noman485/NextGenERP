@@ -2,7 +2,8 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
-from auth.security import decode_access_token
+from auth.security import decode_access_token_claims
+from auth.tokens import session_is_active
 from database.connection import engine
 from models.user import User
 
@@ -19,9 +20,9 @@ def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    user_id = decode_access_token(credentials.credentials)
+    claims = decode_access_token_claims(credentials.credentials)
     with Session(engine) as session:
-        user = session.get(User, user_id)
+        user = session.get(User, claims.user_id)
         if user is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -34,7 +35,19 @@ def get_current_user(
                 detail="This account has been deactivated",
             )
         session.expunge(user)
-        return user
+
+    # New tokens are bound to a server-side session family. Tokens minted
+    # before the refresh-token upgrade have no ``sid`` claim and remain valid
+    # until their normal 30-minute expiry (documented compatibility window).
+    if claims.session_id is not None and not session_is_active(
+        claims.session_id, user.id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired access token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return user
 
 
 def require_authenticated_user(user: User = Depends(get_current_user)) -> User:

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { apiFetch } from '../../api';
+import { apiFetch, clearSessionTokens, logoutSession } from '../../api';
 import { Icon } from '../../components/Icons';
 import AdminOverview from './AdminOverview';
 import AdminAnalytics from './AdminAnalytics';
@@ -74,7 +74,7 @@ export default function AdminApp() {
       .then((profile) => {
         if (!active) return;
         if (profile?.unauthorized) {
-          sessionStorage.removeItem('access_token');
+          clearSessionTokens();
           setAccessError('Your session has expired. Sign in again.');
         } else if (profile?.inactive) {
           setAccessError('This account has been deactivated.');
@@ -102,7 +102,7 @@ export default function AdminApp() {
   }, [location.pathname]);
 
   function handleLogout() {
-    sessionStorage.removeItem('access_token');
+    logoutSession();
     setAdmin(null);
     navigate('/admin/login', { replace: true });
   }

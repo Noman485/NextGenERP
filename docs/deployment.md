@@ -34,7 +34,7 @@ Provide runtime values through the hosting platform's secret/configuration facil
 - Use a managed/private PostgreSQL service or a private database container with persistent storage, backups, retention, and tested restore procedures.
 - Allow inbound database traffic only from the backend's network identity/security group. Do not create a public PostgreSQL endpoint or bind the database to a public host interface.
 - Use an application role with only the required database privileges; keep administrative credentials separate.
-- The current application creates missing tables with SQLAlchemy `create_all` at startup. It does not include a versioned schema migration system. Review schema changes and existing data carefully before upgrading; take a restorable backup and plan migrations explicitly rather than assuming startup upgrades existing tables.
+- The application creates missing tables with SQLAlchemy `create_all` at startup and applies the versioned Alembic migrations on demand (`python migrate.py` or `python -m alembic upgrade head`). Take a restorable backup before upgrading; the baseline downgrade is destructive and is intended only for disposable databases. See `docs/MIGRATIONS.md`.
 - The Compose named volume is for local persistence only. Protect and back up production data independently.
 
 ## CORS and HTTPS
@@ -42,8 +42,8 @@ Provide runtime values through the hosting platform's secret/configuration facil
 - Set `CORS_ORIGINS` to the exact HTTPS origin used by users, such as `https://erp.example.com`. Separate multiple origins with commas. The backend rejects `*`.
 - Keep TLS termination at a trusted ingress/reverse proxy and redirect HTTP to HTTPS. Use valid certificates and renew them automatically.
 - Forward the original host and protocol from the trusted proxy. Configure the platform so direct public access to backend and database ports is blocked.
-- Add ingress-level login rate limiting before public launch. Application-level rate limiting, user roles, and account administration are not implemented in this repository.
-- The current frontend stores the access token in session storage. Review the deployment's browser security policy and exposure model before launch.
+- Application-level rate limiting is implemented for authentication, registration and assistant traffic, with an optional Redis-backed shared store. Keep ingress-level rate limiting as defence in depth before public launch; user roles and account administration are implemented.
+- The frontend stores access and refresh tokens in session storage. Review the deployment's browser security policy and exposure model before launch.
 
 ## Deployment checklist
 

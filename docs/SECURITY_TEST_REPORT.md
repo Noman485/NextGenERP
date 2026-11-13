@@ -177,3 +177,45 @@ Verified by source inspection and built-bundle inspection:
 ## 9. Conclusion
 
 Within the automated scope, the NextGenERP security catalog is fully green: **906/906 executed cases passed** and the complete backend suite is **972/972 green**. The remaining 94 cases are explicitly manual, blocked or documented gaps. Deployment readiness still depends on the PostgreSQL, multi-worker rate-limit, dependency-scan and real-device voice checks listed in `PRE_DEPLOYMENT_CHECKLIST.md`.
+
+## 10. Phase 2 and Phase 3 update (2026-11-11)
+
+Phase 2 implemented and tested the following security controls. Phase 3 added
+versioned migrations and PostgreSQL verification tests.
+
+### Phase 2 results
+
+| Improvement | Evidence | Result |
+| --- | --- | --- |
+| Audit logging | `backend/tests/test_audit_logging.py` | **14 passed** |
+| Refresh-token rotation and revocation | `backend/tests/test_token_security.py` | **9 passed** |
+| Shared rate limiting | `backend/tests/test_shared_rate_limit.py` | **7 passed** |
+| Database integrity constraints | `backend/tests/test_database_integrity.py` | **10 passed** |
+| Migration upgrade/downgrade/bootstrap | `backend/tests/test_migrations.py` | **3 passed** |
+| PostgreSQL parity | `backend/tests/test_postgres_parity.py` | **6 skipped (BLOCKED: no PostgreSQL service)** |
+| Full backend suite | `backend/tests/*` | **1,012 passed**, 6 skipped |
+
+### Superseded Phase 1 gaps
+
+Eighteen of the 38 Phase 1 not-implemented gaps are now implemented and
+verified by the Phase 2 tests: refresh-token rotation, server-side logout
+revocation, audit log model/table, audit middleware/hooks, failed and successful
+login, successful admin login, admin activation/deactivation, stock
+modification, sales order creation/update/status/cancellation, purchase-order
+status change, suspicious assistant prompt, and audit tamper resistance. The
+remaining gaps are rate-limit-trigger auditing, unauthorized-access auditing,
+administrator analytics auditing, role management, password reset/change,
+audit retention/centralization/alerting/export, and admin password policy/session
+timeout.
+
+### Phase 3 status
+
+- Alembic baseline revision `0001` creates the complete current schema and
+  passes `alembic check` with no pending operations.
+- `migrate.py` preserves existing data; a rehearsal on a copy of
+  `backend/nextgenerp.db` retained all 4 users, 101 products, 100 orders,
+  100 suppliers, 100 purchase orders and 145 inventory transactions, and stamped
+  the database at Alembic head `0001`.
+- PostgreSQL verification remains **BLOCKED** because Docker/PostgreSQL is not
+  available. The parity tests are skipped automatically and run when
+  `TEST_POSTGRES_URL` points to a disposable database.

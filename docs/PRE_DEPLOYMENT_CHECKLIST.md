@@ -11,15 +11,15 @@ Legend: `[x]` verified, `[ ]` outstanding or blocked, `[!]` accepted risk / manu
 - [x] Security suite executes all 906 automated catalog cases: `906 passed, 0 failed, 0 skipped` in 325.15 s.
   - Command: `Set-Location backend; .\venv\Scripts\python.exe -m pytest tests\test_security_suite.py -q --junitxml=security-results-run2.xml`
   - Evidence: `security-results-run2.xml` (`tests="906" failures="0" errors="0" skipped="0"`).
-- [x] Full backend regression suite (`backend/tests`) is green: `972 passed, 0 failed, 0 skipped` in 424.68 s.
-  - Command: `Set-Location backend; .\venv\Scripts\python.exe -m pytest -q --junitxml=backend-full.xml`
-  - Evidence: `backend-full.xml` (`tests="972" failures="0" errors="0" skipped="0"`). The 972 includes the 906 security cases plus the existing backend tests.
+- [x] Full backend regression suite (`backend/tests`) is green: **1,012 passed, 0 failed, 6 skipped** (PostgreSQL parity tests are blocked).
+  - Command: `Set-Location backend; .\venv\Scripts\python.exe -m pytest -q --junitxml=backend-final-phase3.xml`
+  - Evidence: `backend-final-phase3.xml` (`tests="1012" failures="0" errors="0" skipped="6"`). Includes 906 security cases, 14 audit tests, 9 token tests, 7 shared-rate-limit tests, 10 database-integrity tests and 3 migration tests.
 - [x] Frontend production build succeeds.
   - Command: `Set-Location frontend; npm run build`
   - Evidence: Vite 8.3.4, 51 modules transformed, `dist/index.html` + hashed CSS/JS assets emitted.
   - Known warning: the Three.js chunk is 694.91 kB (>500 kB warning). Tracked as BUG-017; not a release blocker.
 - [ ] Frontend browser smoke test against the production build on the target browser(s). No committed E2E framework exists (BUG-018).
-- [ ] PostgreSQL verification suite (`SEC-0941`–`SEC-0968`) is blocked: no PostgreSQL service/Docker in this environment. Run connectivity, schema, migrations, type parity, concurrency and rollback checks on PostgreSQL before release.
+- [ ] PostgreSQL verification suite remains blocked: no PostgreSQL service/Docker in this environment. `tests/test_postgres_parity.py` contains 6 skip-gated tests for boolean/UTC round-trip, check constraints, `FOR UPDATE` locking, concurrent stock deduction, duplicate-SKU races and UTC timestamp parity. Run them with `TEST_POSTGRES_URL` before release.
 
 ## 2. Secrets and environment
 
@@ -41,16 +41,18 @@ Legend: `[x]` verified, `[ ]` outstanding or blocked, `[!]` accepted risk / manu
 - [x] Security headers are applied to API responses; nginx applies CSP and baseline headers to the SPA/static assets.
 - [x] HSTS is emitted only for HTTPS / trusted `X-Forwarded-Proto: https`.
 - [x] Rate limiting is enabled by default (`SECURITY_RATE_LIMIT_ENABLED` unset/1) with login/register/assistant scopes.
-- [ ] Decide the backend worker count. The limiter is in-process; multi-worker deployments require a shared counter store before they can enforce global limits (BLK-003).
+- [x] Shared rate limiting supports Redis via `RATE_LIMIT_REDIS_URL`, with hashed keys, atomic fixed-window Lua increments, in-process fallback and fail-closed mode (`RATE_LIMIT_REDIS_REQUIRED`).
+- [ ] Decide the backend worker count. Before multi-worker deployment, set `RATE_LIMIT_REDIS_URL`, run `tests/test_shared_rate_limit.py` against live Redis and verify 429 behavior across workers.
 - [ ] If a reverse proxy adds clients through `X-Forwarded-For`, keep direct-client limiting or configure a trusted-proxy allowlist. The current code deliberately ignores forwarded headers.
 
 ## 4. Database and migrations
 
-- [x] Additive schema bootstrap (`ensure_schema`) creates missing tables, adds missing columns and indexes, and is idempotent on SQLite.
-- [x] Unique SKU, foreign keys and failed-order rollback are covered by automated deployment cases.
+- [x] Additive schema bootstrap (`ensure_schema`) creates missing tables, adds missing columns/indexes, database-level integrity triggers, audit append-only guards, and is idempotent on SQLite.
+- [x] Unique SKU, foreign keys, check constraints, failed-order rollback, audit immutability and UTC round-trip are covered by automated tests.
+- [x] Alembic baseline revision `0001` creates the complete schema and passes `alembic check`; `migrate.py` preserves existing data and stamps head.
 - [ ] Take a verified backup before running migrations on the production database.
 - [ ] Rehearse restore of that backup on a separate database.
-- [ ] Run `ensure_schema()` against PostgreSQL and confirm existing rows are preserved.
+- [ ] Run `migrate.py` against PostgreSQL and confirm existing rows are preserved.
 - [ ] Verify UTC timestamp round-trip and naive/aware datetime behavior on PostgreSQL (SQLite returns naive datetimes).
 - [ ] Run two concurrent stock/order/cancellation/purchase-receipt transactions on PostgreSQL; SQLite makes `with_for_update()` a no-op (BLK-001).
 
@@ -81,8 +83,8 @@ Legend: `[x]` verified, `[ ]` outstanding or blocked, `[!]` accepted risk / manu
 - [ ] Dependency advisory scan: `pip-audit` is unavailable and npm audit is constrained by network/offline access (SEC-0985–SEC-0988). Run both in CI with advisory database access.
 - [ ] Python/npm transitive dependency review against current advisories.
 - [ ] [!] Shared-workspace access: any authenticated USER can read all business records. Accepted as a product decision; obtain owner sign-off before release.
-- [ ] [!] No structured audit log for admin/stock/order mutations (24 not-implemented cases). Accepted only with an explicit risk decision and compensating monitoring.
-- [ ] [!] Stateless JWT replay until 30-minute expiry; no refresh rotation or server-side revocation. Accepted by design unless the threat model requires otherwise.
+- [x] Structured audit logging is implemented for admin, stock and order mutations, with request IDs, sanitized before/after values and append-only storage. Residual gaps: rate-limit, unauthorized-access and analytics-access events, plus retention/export/alerting.
+- [x] Refresh-token rotation and server-side revocation are implemented; legacy access tokens without `sid` remain valid only until their normal 30-minute expiry.
 - [ ] [!] Frontend component/E2E test framework absent (BUG-018). Accepted temporarily; add Vitest/RTL or Playwright.
 
 ## 8. Release actions

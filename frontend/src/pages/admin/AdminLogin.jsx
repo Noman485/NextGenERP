@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { apiFetch } from '../../api';
+import { apiFetch, setSessionTokens } from '../../api';
 import { Icon } from '../../components/Icons';
 
 export default function AdminLogin() {
@@ -60,7 +60,7 @@ export default function AdminLogin() {
           'This account is a normal user account. Administrator access is required.',
         );
       }
-      sessionStorage.setItem('access_token', data.access_token);
+      setSessionTokens(data.access_token, data.refresh_token);
       navigate('/admin', { replace: true });
     } catch (requestError) {
       setError(

@@ -41,7 +41,10 @@ export default function Auth({ onAuthenticated }) {
       if (!data.access_token) {
         throw new Error('The authentication service did not return an access token.');
       }
-      onAuthenticated(data.access_token, data.user);
+      // Older backend builds do not issue a refresh token. Continue with the
+      // access token so a rolling frontend/backend upgrade stays usable; the
+      // refresh flow activates automatically once the API provides one.
+      onAuthenticated(data.access_token, data.refresh_token, data.user);
     } catch (requestError) {
       setError(
         requestError instanceof TypeError

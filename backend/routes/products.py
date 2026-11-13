@@ -1,6 +1,6 @@
 import math
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -10,7 +10,9 @@ from models.category import Category
 from models.order import Order
 from models.product import Product
 from models.purchase_order import PurchaseOrder
+from models.user import User
 from schemas.product import ProductCreate
+from services.audit import product_state, record_audit
 from services.inventory import change_stock
 
 
@@ -56,7 +58,12 @@ def validate_product(product_data: ProductCreate, db: Session, product_id: int |
 
 
 @router.post("/")
-def create_product(product: ProductCreate, db: Session = Depends(get_db)):
+def create_product(
+    product: ProductCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     name, sku = validate_product(product, db)
     initial_stock = product.stock_quantity
     new_product = Product(
@@ -79,6 +86,15 @@ def create_product(product: ProductCreate, db: Session = Depends(get_db)):
                 initial_stock,
                 f"Initial stock for product #{new_product.id}",
             )
+        record_audit(
+            db,
+            action="product.create",
+            entity_type="product",
+            entity_id=new_product.id,
+            actor=current_user,
+            after=product_state(new_product),
+            request=request,
+        )
         db.commit()
     except IntegrityError as error:
         db.rollback()
@@ -116,7 +132,9 @@ def get_product(product_id: int, db: Session = Depends(get_db)):
 def update_product(
     product_id: int,
     product_data: ProductCreate,
-    db: Session = Depends(get_db)
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     product = (
         db.query(Product)
@@ -131,6 +149,7 @@ def update_product(
             detail="Product not found"
         )
 
+    before = product_state(product)
     name, sku = validate_product(product_data, db, product_id)
     product.name = name
     product.sku = sku
@@ -147,6 +166,16 @@ def update_product(
         )
     product.reorder_level = product_data.reorder_level
     product.category_id = product_data.category_id
+    record_audit(
+        db,
+        action="product.update",
+        entity_type="product",
+        entity_id=product.id,
+        actor=current_user,
+        before=before,
+        after=product_state(product),
+        request=request,
+    )
 
     try:
         db.commit()
@@ -165,7 +194,12 @@ def update_product(
 
 
 @router.delete("/{product_id}")
-def delete_product(product_id: int, db: Session = Depends(get_db)):
+def delete_product(
+    product_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     product = (
         db.query(Product)
         .filter(Product.id == product_id)
@@ -191,6 +225,16 @@ def delete_product(product_id: int, db: Session = Depends(get_db)):
             detail="Product cannot be deleted because it is referenced by purchase orders",
         )
 
+    before = product_state(product)
+    record_audit(
+        db,
+        action="product.delete",
+        entity_type="product",
+        entity_id=product.id,
+        actor=current_user,
+        before=before,
+        request=request,
+    )
     db.delete(product)
     try:
         db.commit()

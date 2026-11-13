@@ -5,13 +5,13 @@ NextGenERP is an inventory and procurement ERP application for managing product 
 ## Current functionality
 
 - **Dashboard:** live catalog/order summaries, an interactive 3D stock snapshot, low-stock and out-of-stock attention lists, pending-order summaries, and shortcuts to operational screens. These are operational metrics, not forecasts.
-- **Authentication:** account registration and sign-in with 30-minute JWT bearer tokens. Passwords are hashed with Argon2id. Tokens are held in browser session storage. Accounts have either the `USER` or `ADMIN` role; registration always creates a `USER`. Administrator access is checked from the database on every request, not from a token claim.
-- **Administrator area:** a separate `/admin/login` and `/admin` experience with a business overview, sales analytics (daily, monthly, yearly, user, product, inventory and supplier), and account activation controls. Normal users receive HTTP 403 from administrator APIs. There is no default administrator and no hardcoded password.
+- **Authentication:** account registration and sign-in with 30-minute JWT bearer tokens plus seven-day refresh tokens. Refresh tokens rotate on use, reuse revokes the session family, and logout revokes both token classes. Passwords are hashed with Argon2id. Tokens are held in browser session storage. Accounts have either the `USER` or `ADMIN` role; registration always creates a `USER`. Administrator access is checked from the database on every request, not from a token claim.
+- **Administrator area:** a separate `/admin/login` and `/admin` experience with a business overview, sales analytics (daily, monthly, yearly, user, product, inventory and supplier), account activation controls, and an append-only audit-log view for security-relevant actions. Normal users receive HTTP 403 from administrator APIs. There is no default administrator and no hardcoded password.
 - **Catalog:** create, view, update, and delete products, categories, and suppliers, subject to existing relationship protections.
 - **Sales orders:** create and view sales orders, update customer details, and progress orders through `Pending → Confirmed → Shipped → Delivered`. Pending or confirmed orders can be cancelled; cancellation restores stock. Sales order history cannot be deleted.
 - **Purchase orders:** create and view purchase orders and progress them through `Pending → Approved → Ordered → Received`. Receiving adds stock once. Unreceived orders can be cancelled or deleted.
 - **Inventory operations:** record stock-in and stock-out transactions with a reason and view transaction history. Stock-out operations reject quantities greater than available inventory.
-- **API health:** the `/health` endpoint checks database connectivity.
+- **API health & observability:** `/health` checks database connectivity, and mutating/auth flows record request-correlated, append-only audit events (without secrets) for traceability.
 - **Demand forecasting (ML):** an integrated XGBoost model trained on the Kaggle Store Item Demand dataset produces a 7-day demand forecast and smart reorder recommendations (held-out test WAPE **8.42%**, R² **0.744**). Results are available on the **Forecasting** page and through `GET /ml/insights`. See the [ML integration guide](./docs/ml-integration.md).
 - **In-app assistant:** a read-only assistant that is scoped to NextGenERP and available on every authenticated page. It answers questions about inventory, orders, suppliers, forecasting, navigation and troubleshooting using live workspace data. It supports English, Hindi and Bengali, with optional browser voice input and spoken replies. The built-in engine needs no API key; an OpenAI-compatible provider can be enabled optionally. It cannot create, edit, cancel or delete records. See the [assistant guide](./docs/ai-assistant.md).
 - **Voice reliability:** secure-context detection, asynchronous voice loading, exact/best-match voice selection, interim transcripts, a 15-second silence timeout, localized error guidance and guards against duplicate starts and late results. Unsupported or insecure browsers keep the typed path usable.
@@ -20,8 +20,8 @@ NextGenERP is an inventory and procurement ERP application for managing product 
 
 - The ML model is trained on the demo dataset (three products) and is not retrained automatically from ERP sales history; see the [ML integration guide](./docs/ml-integration.md) for details.
 - The dashboard search field is a module jump shortcut; it does not search records.
-- Password reset, login rate limiting and multi-factor authentication are not implemented.
-- Schema changes use additive, idempotent migrations for SQLite and PostgreSQL; a fully versioned migration framework is not configured.
+- Password reset and multi-factor authentication are not implemented. Login and API abuse are rate-limited, with an optional Redis-backed shared limiter for multi-worker deployments.
+- Schema changes use Alembic (head `0001`) for versioned migrations; the legacy additive `ensure_schema()` helper remains for compatibility. See `docs/MIGRATIONS.md`.
 - Inventory value in the administrator area is reported at selling price because product cost is not stored.
 
 ## Technology and architecture
@@ -50,6 +50,17 @@ The browser SPA calls the backend through same-origin API paths in production; t
 ### Backend
 
 Use the database URL for your local development database. The backend loads a `.env` file from its current directory if present, and requires `DATABASE_URL` and a `JWT_SECRET_KEY` of at least 32 characters.
+
+For schema changes, use Alembic from `backend/`:
+
+```powershell
+Set-Location backend
+python -m alembic upgrade head
+# or for existing unversioned local databases:
+python migrate.py
+```
+
+See [docs/MIGRATIONS.md](./docs/MIGRATIONS.md) for upgrade/rollback notes.
 
 ```powershell
 py -3.13 -m venv backend\venv
@@ -153,6 +164,7 @@ When running the backend directly for local development, interactive OpenAPI doc
 | `/assistant/chat` | Project-scoped assistant reply with `language` (`en`, `hi`, `bn`) |
 | `/admin/overview`, `/admin/analytics/*` | Administrator overview and analytics |
 | `/admin/users`, `/admin/users/{user_id}/status` | Safe account listing and activation controls |
+| `/admin/audit-logs` | Append-only audit-log listing (admin only) |
 | `/health` | Database-backed readiness check |
 
 Business-resource routes require `Authorization: Bearer <token>`. Registration accepts a username of 3–80 letters/digits/periods/underscores/hyphens and a password of 12–128 characters. There is no default account; register an account through the UI or API.

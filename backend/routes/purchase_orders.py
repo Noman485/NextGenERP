@@ -1,7 +1,7 @@
 import math
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -10,7 +10,9 @@ from database.connection import engine
 from models.product import Product
 from models.purchase_order import PurchaseOrder
 from models.supplier import Supplier
+from models.user import User
 from schemas.purchase_order import PurchaseOrderCreate, PurchaseOrderStatusUpdate
+from services.audit import purchase_order_state, record_audit
 from services.inventory import change_stock
 
 
@@ -37,7 +39,9 @@ def get_db():
 @router.post("/")
 def create_purchase_order(
     purchase_order_data: PurchaseOrderCreate,
+    request: Request,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     supplier = db.query(Supplier).filter(
         Supplier.id == purchase_order_data.supplier_id
@@ -74,6 +78,16 @@ def create_purchase_order(
 
     db.add(new_purchase_order)
     try:
+        db.flush()
+        record_audit(
+            db,
+            action="purchase_order.create",
+            entity_type="purchase_order",
+            entity_id=new_purchase_order.id,
+            actor=current_user,
+            after=purchase_order_state(new_purchase_order),
+            request=request,
+        )
         db.commit()
     except IntegrityError as error:
         db.rollback()
@@ -108,7 +122,9 @@ def get_purchase_order(purchase_order_id: int, db: Session = Depends(get_db)):
 def update_purchase_order_status(
     purchase_order_id: int,
     status_data: PurchaseOrderStatusUpdate,
+    request: Request,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     purchase_order = (
         db.query(PurchaseOrder)
@@ -133,6 +149,7 @@ def update_purchase_order_status(
             ),
         )
 
+    before = purchase_order_state(purchase_order)
     if status_data.status == "Received":
         product = (
             db.query(Product)
@@ -152,6 +169,20 @@ def update_purchase_order_status(
         )
 
     purchase_order.status = status_data.status
+    record_audit(
+        db,
+        action=(
+            "purchase_order.receive"
+            if purchase_order.status == "Received"
+            else "purchase_order.status_change"
+        ),
+        entity_type="purchase_order",
+        entity_id=purchase_order.id,
+        actor=current_user,
+        before=before,
+        after=purchase_order_state(purchase_order),
+        request=request,
+    )
     try:
         db.commit()
     except SQLAlchemyError:
@@ -162,7 +193,12 @@ def update_purchase_order_status(
 
 
 @router.delete("/{purchase_order_id}")
-def delete_purchase_order(purchase_order_id: int, db: Session = Depends(get_db)):
+def delete_purchase_order(
+    purchase_order_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     purchase_order = (
         db.query(PurchaseOrder)
         .filter(PurchaseOrder.id == purchase_order_id)
@@ -179,6 +215,15 @@ def delete_purchase_order(purchase_order_id: int, db: Session = Depends(get_db))
             detail="A received purchase order cannot be deleted because it records received stock",
         )
 
+    record_audit(
+        db,
+        action="purchase_order.delete",
+        entity_type="purchase_order",
+        entity_id=purchase_order.id,
+        actor=current_user,
+        before=purchase_order_state(purchase_order),
+        request=request,
+    )
     db.delete(purchase_order)
     try:
         db.commit()
